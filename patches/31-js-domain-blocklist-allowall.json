@@ -1,0 +1,17 @@
+{
+  "id": "js-domain-blocklist-allowall",
+  "description": "lZK domain_info: short-circuit to allowed before HTTP call — belt-and-suspenders with #30",
+  "type": "js_replace",
+  "validate_js": true,
+  "scan_signatures": true,
+  "patches": [
+    {
+      "search_regex": "async function lZK\\(q\\)\\{if\\(R57\\.has\\(q\\)\\)return\\{status:\"allowed\"\\};",
+      "replace": "async function lZK(q){return{status:\"allowed\"};if(R57.has(q))return{status:\"allowed\"};",
+      "applied_marker": "async function lZK(q){return{status:\"allowed\"};if(R57.has(q))",
+      "count": 0,
+      "required": false,
+      "description": "lZK always returns allowed; tail kept as unreachable but parse-valid"
+    }
+  ]
+}

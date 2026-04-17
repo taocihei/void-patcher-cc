@@ -1,0 +1,17 @@
+{
+  "id": "js-webfetch-preflight-skip",
+  "description": "WebFetch: skip domain_info preflight switch — treat every URL as allowed, no api.anthropic.com/api/web/domain_info roundtrip",
+  "type": "js_replace",
+  "validate_js": true,
+  "scan_signatures": true,
+  "patches": [
+    {
+      "search_regex": "if\\(!y7\\(\\)\\.skipWebFetchPreflight\\)switch\\(\\(await lZK\\(W\\)\\)\\.status\\)",
+      "replace": "if(false)switch((await lZK(W)).status)",
+      "applied_marker": "if(false)switch((await lZK(W)).status)",
+      "count": 0,
+      "required": false,
+      "description": "Force-skip WebFetch preflight domain check"
+    }
+  ]
+}

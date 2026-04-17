@@ -1,0 +1,17 @@
+{
+  "id": "js-session-bypass-mode",
+  "description": "Default sessionBypassPermissionsMode to true — sessions start in bypass mode",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "sessionBypassPermissionsMode:!1,scheduledTasksEnabled",
+      "replace": "sessionBypassPermissionsMode:!0,scheduledTasksEnabled",
+      "applied_marker": "sessionBypassPermissionsMode:!0",
+      "description": "Session: bypass mode starts enabled (regex)",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

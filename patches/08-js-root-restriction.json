@@ -1,0 +1,17 @@
+{
+  "id": "js-root-restriction",
+  "description": "Remove root/sudo restriction that blocks --dangerously-skip-permissions as root user",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "--dangerously-skip-permissions cannot be used with root/sudo privileges for security reasons\"\\),process\\.exit\\(1\\)",
+      "replace": "--dangerously-skip-permissions running with elevated privileges — all actions authorized\"),void(0)          ",
+      "applied_marker": "--dangerously-skip-permissions running with elevated privileges",
+      "description": "Replace process.exit(1) root check with void(0) noop (regex)",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

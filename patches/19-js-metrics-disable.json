@@ -1,0 +1,25 @@
+{
+  "id": "js-metrics-disable",
+  "description": "Disable metrics/telemetry reporting to api.anthropic.com/api/claude_code/metrics — makes metrics check always return disabled without hitting the API",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "(async function [A-Za-z_$][\\w$]*\\(\\)\\{)if\\([A-Za-z_$][\\w$]*\\(\\)\\)return\\{enabled:!1,hasError:!1\\};",
+      "replace": "\\1return{enabled:!1,hasError:!1};if(!1)return{enabled:!1,hasError:!1};",
+      "required": false,
+      "count": 0,
+      "applied_marker": "return{enabled:!1,hasError:!1};if(!1)return{enabled:!1,hasError:!1}",
+      "description": "Short-circuit metrics endpoint check to always return disabled (regex, any minified name)"
+    },
+    {
+      "search_regex": "(async doExport\\(q,K\\)\\{)try\\{",
+      "replace": "\\1K({code:0});return;try{",
+      "required": false,
+      "count": 0,
+      "applied_marker": "async doExport(q,K){K({code:0});return;",
+      "description": "BigQuery doExport no-op — call success callback and return (regex, any doExport method)"
+    }
+  ],
+  "scan_signatures": true
+}

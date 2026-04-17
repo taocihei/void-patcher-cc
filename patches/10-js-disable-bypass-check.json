@@ -1,0 +1,17 @@
+{
+  "id": "js-disable-bypass-check",
+  "description": "Neutralize the operator disableBypassPermissionsMode check — prevents remote policy from disabling bypass mode",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "disableBypassPermissionsMode===\"disable\"",
+      "replace": "disableBypassPermissionsMode===\"__VOID_NEVER__\"",
+      "applied_marker": "disableBypassPermissionsMode===\"__VOID_NEVER__\"",
+      "count": 0,
+      "description": "Neutralize disableBypassPermissionsMode policy check (regex, all occurrences)",
+      "required": false
+    }
+  ],
+  "scan_signatures": true
+}

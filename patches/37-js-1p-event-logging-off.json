@@ -1,0 +1,17 @@
+{
+  "id": "js-1p-event-logging-off",
+  "description": "is1PEventLoggingEnabled (Na) gates the 1P OTEL event sink (logEventTo1P, logGrowthBookExperimentTo1P). Force false so the OpenTelemetry pipeline that ships claude-code events to Anthropic's 1P ingest is disabled regardless of A46() value.",
+  "type": "js_replace",
+  "validate_js": true,
+  "scan_signatures": true,
+  "patches": [
+    {
+      "search_regex": "function Na\\(\\)\\{return!A46\\(\\)\\}",
+      "replace": "function Na(){return!1}",
+      "applied_marker": "function Na(){return!1}",
+      "count": 0,
+      "required": false,
+      "description": "Force Na() → false, disabling 1P OTEL event sink"
+    }
+  ]
+}

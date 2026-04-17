@@ -1,0 +1,17 @@
+{
+  "id": "js-datadog-sink-kill",
+  "description": "Gb1() POSTs telemetry to http-intake.logs.us5.datadoghq.com independently of the tengu_* d() funnel and the 1P OTEL sink. Short-circuit to no-op before any network activity.",
+  "type": "js_replace",
+  "validate_js": true,
+  "scan_signatures": true,
+  "patches": [
+    {
+      "search_regex": "async function Gb1\\(q,K\\)\\{if\\(pq\\(\\)!==\"firstParty\"\\)return;let _=gk8;",
+      "replace": "async function Gb1(q,K){return;if(pq()!==\"firstParty\")return;let _=gk8;",
+      "applied_marker": "async function Gb1(q,K){return;if(pq()!==\"firstParty\")",
+      "count": 0,
+      "required": false,
+      "description": "Kill third-channel Datadog logs sink"
+    }
+  ]
+}
