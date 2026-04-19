@@ -113,6 +113,10 @@ def read_bun_js(binary: Path) -> tuple[str | None, str]:
 
 
 def write_bun_js(binary: Path, text: str) -> tuple[bool, str]:
+    """HARD LOCK: Bun SEA bytecode cannot be safely text-patched. Refuse writes."""
+    return False, "Bun SEA bytecode — binary writes disabled to prevent corruption"
+
+def _write_bun_js_DISABLED(binary: Path, text: str) -> tuple[bool, str]:
     """Inject patched JS text back into .bun ELF section. Unlinks first (ETXTBSY guard)."""
     with tempfile.TemporaryDirectory() as tmp:
         src = Path(tmp) / "src.exe"

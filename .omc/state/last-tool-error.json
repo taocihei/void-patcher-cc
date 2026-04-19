@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"ls -lh /home/void/.void-patcher/backups/ 2>/dev/null; ls -lh /home/void/.vpcc/backups/ 2>/dev/null\",\"description\":\"Find backups\"}",
+  "error": "Exit code 2\ntotal 1.3G\n-rwxr-xr-x 1 void void 226M Apr 19 15:00 claude-code__2.1.114-pre__20260419T130047Z__ca0a9a594823.exe\n-rwxr-xr-x 1 void void 226M Apr 19 15:00 claude-code__2.1.114-pre__20260419T130052Z__455c4aded0dc.exe\n-rwxr-xr-x 1 void void 226M Apr 19 15:00 claude-code__2.1.114-pre__20260419T130056Z__4f056bd640a3.exe\n-rwxr-xr-x 1 void void 226M Apr 19 15:00 claude-code__2.1.114-pre__20260419T130103Z__8d369239eb17.exe\n-rwxr-xr-x 1 void void 226M Apr 19 15:01 claude-code__2.1.114-pre__20...",
+  "timestamp": "2026-04-19T13:36:42.123Z",
+  "retry_count": 2
+}
