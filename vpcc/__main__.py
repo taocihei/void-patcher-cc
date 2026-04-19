@@ -1,6 +1,7 @@
 """
 vpcc — Void Patcher for Claude Code
-Single-target applier: patches @anthropic-ai/claude-code/cli.js in-place.
+Supports both cli.js (≤2.1.112) and Bun SEA binary (≥2.1.114).
+Regex-signature patches survive all minor/patch releases.
 """
 from __future__ import annotations
 import argparse
@@ -11,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -21,35 +23,57 @@ BACKUP_DIR  = Path.home() / ".vpcc" / "backups"
 
 G, Y, R, B, X = "\033[32m", "\033[33m", "\033[31m", "\033[1m", "\033[0m"
 
+_PKG = "@anthropic-ai/claude-code"
+_BUN_SECTION = ".bun"
 
-# ── locate cli.js ────────────────────────────────────────────────────────────
 
-def find_cli_js() -> Path | None:
-    """Locate @anthropic-ai/claude-code/cli.js across common install paths."""
-    candidates: list[Path] = []
+# ── target discovery ─────────────────────────────────────────────────────────
 
-    # 1) npm global via `npm root -g`
+def _npm_global_roots() -> list[Path]:
+    roots: list[Path] = []
     try:
         r = subprocess.run(["npm", "root", "-g"], capture_output=True, text=True, timeout=5)
         if r.returncode == 0 and r.stdout.strip():
-            candidates.append(Path(r.stdout.strip()) / "@anthropic-ai/claude-code/cli.js")
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+            roots.insert(0, Path(r.stdout.strip()))
+    except Exception:
         pass
-
-    # 2) user-level npm prefix
     home = Path.home()
-    candidates += [
-        home / ".npm-global/lib/node_modules/@anthropic-ai/claude-code/cli.js",
-        home / ".local/lib/node_modules/@anthropic-ai/claude-code/cli.js",
-        home / "node_modules/@anthropic-ai/claude-code/cli.js",
-        Path("/usr/local/lib/node_modules/@anthropic-ai/claude-code/cli.js"),
-        Path("/usr/lib/node_modules/@anthropic-ai/claude-code/cli.js"),
+    roots += [
+        home / ".npm-global/lib/node_modules",
+        home / ".local/lib/node_modules",
+        Path("/usr/local/lib/node_modules"),
+        Path("/usr/lib/node_modules"),
     ]
+    return roots
 
-    for p in candidates:
-        if p.is_file():
-            return p
-    return None
+
+def _version_glob(base: Path, suffix: str) -> list[Path]:
+    import glob as _glob
+    return [Path(m) for m in _glob.glob(str(base / "*" / "lib" / "node_modules" / suffix))]
+
+
+def find_target() -> tuple[Path | None, str]:
+    """Return (path, kind) — kind is 'js' or 'bun_sea'. js preferred, binary fallback."""
+    checks = [
+        (_PKG + "/cli.js", "js"),
+        (_PKG + "/bin/claude.exe", "bun_sea"),
+        (_PKG + "/bin/claude", "bun_sea"),
+    ]
+    for npm_root in _npm_global_roots():
+        for suffix, kind in checks:
+            p = npm_root / suffix
+            if p.exists() and (kind == "js" or p.stat().st_size > 1_000_000):
+                return p, kind
+
+    mise_base = Path.home() / ".local/share/mise/installs/node"
+    nvm_base  = Path(os.environ.get("NVM_DIR", Path.home() / ".nvm")) / "versions/node"
+    for base in [mise_base, nvm_base]:
+        for suffix, kind in checks:
+            for p in _version_glob(base, suffix):
+                if p.exists() and (kind == "js" or p.stat().st_size > 1_000_000):
+                    return p, kind
+
+    return None, ""
 
 
 def sha256_short(path: Path) -> str:
@@ -60,15 +84,49 @@ def sha256_short(path: Path) -> str:
     return h.hexdigest()[:12]
 
 
-def node_syntax_check(path: Path) -> bool:
-    try:
-        r = subprocess.run(["node", "--check", str(path)], capture_output=True, text=True, timeout=10)
-        return r.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return True  # can't check without node — assume OK
+# ── Bun SEA helpers ───────────────────────────────────────────────────────────
+
+def read_bun_js(binary: Path) -> tuple[str | None, str]:
+    """Extract JS text from .bun ELF section. Copies binary first (ETXTBSY guard)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        src = Path(tmp) / "src.exe"
+        shutil.copy2(binary, src)
+        section = Path(tmp) / "section.bin"
+        r = subprocess.run(
+            ["objcopy", "--dump-section", f"{_BUN_SECTION}={section}", str(src)],
+            capture_output=True, text=True,
+        )
+        if r.returncode != 0:
+            return None, f"objcopy dump: {(r.stderr or r.stdout).strip()}"
+        try:
+            return section.read_bytes().decode("utf-8", errors="surrogateescape"), ""
+        except Exception as e:
+            return None, str(e)
 
 
-# ── patch application ────────────────────────────────────────────────────────
+def write_bun_js(binary: Path, text: str) -> tuple[bool, str]:
+    """Inject patched JS text back into .bun ELF section. Unlinks first (ETXTBSY guard)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        src = Path(tmp) / "src.exe"
+        shutil.copy2(binary, src)
+        section = Path(tmp) / "section.bin"
+        section.write_bytes(text.encode("utf-8", errors="surrogateescape"))
+        out = Path(tmp) / "patched.exe"
+        shutil.copy2(src, out)
+        r = subprocess.run(
+            ["objcopy", "--update-section", f"{_BUN_SECTION}={section}", str(out)],
+            capture_output=True, text=True,
+        )
+        if r.returncode != 0:
+            return False, f"objcopy inject: {(r.stderr or r.stdout).strip()}"
+        mode = binary.stat().st_mode & 0o7777
+        binary.unlink()        # must unlink running binary before replacing (ETXTBSY)
+        shutil.copy2(out, binary)
+        binary.chmod(mode)
+    return True, ""
+
+
+# ── patch logic ───────────────────────────────────────────────────────────────
 
 def load_patches() -> list[dict[str, Any]]:
     patches = []
@@ -80,38 +138,143 @@ def load_patches() -> list[dict[str, Any]]:
     return patches
 
 
-def apply_js_replace(cli_js: Path, patch: dict[str, Any], dry_run: bool = False) -> tuple[bool, str]:
-    text = cli_js.read_text()
-    orig = text
+def _apply_subs(text: str, patch: dict) -> tuple[str, int, str]:
+    """Apply sub-patch list to text. Returns (new_text, n_applied, error)."""
     total = 0
-    for p in patch.get("patches", []):
-        pat = p.get("search_regex") or p.get("search")
+    for sub in patch.get("patches", []):
+        rep    = sub.get("replace", "")
+        marker = sub.get("applied_marker")
+        if marker and marker in text:
+            continue  # idempotent — already applied
+
+        pat      = sub.get("search_regex") or sub.get("search")
+        is_regex = bool(sub.get("search_regex"))
         if not pat:
             continue
-        rep = p.get("replace", "")
-        marker = p.get("applied_marker")
-        if marker and marker in text:
-            continue  # already applied
         try:
-            new_text, n = re.subn(pat, rep, text, flags=re.DOTALL)
+            if is_regex:
+                new_text, n = re.subn(pat, rep, text,
+                                      count=sub.get("count", 0) or 0,
+                                      flags=re.DOTALL)
+            else:
+                cnt = sub.get("count", -1)
+                new_text = text.replace(pat, rep, cnt if cnt > 0 else -1)
+                n = int(new_text != text)
         except re.error as e:
-            return False, f"regex error: {e}"
-        expected = p.get("count", 1)
-        if n == 0 and p.get("required", True):
-            return False, f"pattern not found: {pat[:60]}..."
-        if expected and n != expected and expected > 0:
-            return False, f"expected {expected} replacements, got {n}"
+            return text, total, f"regex error: {e}"
+
+        if n == 0 and sub.get("required", False):
+            return text, total, f"required pattern not found: {pat[:60]}..."
         text = new_text
-        total += n
-    if text == orig:
-        return True, "no-op (already applied)"
-    if dry_run:
-        return True, f"would apply {total} replacement(s)"
-    cli_js.write_text(text)
-    return True, f"{total} replacement(s)"
+        total += n if isinstance(n, int) else int(n)
+
+    return text, total, ""
 
 
-def apply_settings(patch: dict[str, Any], dry_run: bool = False) -> tuple[bool, str]:
+def backup(target: Path, kind: str) -> Path:
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    ext   = "exe.bak" if kind == "bun_sea" else "js.bak"
+    dst   = BACKUP_DIR / f"claude.{stamp}.{sha256_short(target)}.{ext}"
+    shutil.copy2(target, dst)
+    for old in sorted(BACKUP_DIR.glob("claude.*.bak"))[:-10]:
+        old.unlink(missing_ok=True)
+    return dst
+
+
+# ── commands ──────────────────────────────────────────────────────────────────
+
+def cmd_patch(args) -> int:
+    patches  = load_patches()
+    target, kind = find_target()
+    js_patches   = [p for p in patches if p.get("type") == "js_replace"]
+    meta_patches = [p for p in patches if p.get("type") not in ("js_replace",)]
+
+    print(f"{B}vpcc patch — {len(patches)} patches{X}")
+    if target:
+        label = "cli.js" if kind == "js" else f"Bun SEA {target.name}"
+        print(f"  target : {target}")
+        print(f"  format : {label}")
+        print(f"  sha    : {sha256_short(target)}")
+        if not args.dry_run:
+            bkp = backup(target, kind)
+            print(f"  backup : {bkp}")
+    else:
+        print(f"  {Y}target not found — settings-only patches will apply{X}")
+
+    ok = fail = skip = 0
+
+    # ── JS patches ─────────────────────────────────────────────────────────
+    if not target:
+        for p in js_patches:
+            print(f"  {Y}skip{X} {p['id']:40s}  target not found")
+            skip += 1
+    elif kind == "bun_sea":
+        # Batch: single extract → all subs → single inject (saves repeated 236MB I/O)
+        text, err = read_bun_js(target)
+        if text is None:
+            print(f"  {R}fail{X}  [bun-extract]  {err}")
+            fail += len(js_patches)
+        else:
+            orig = text
+            for p in js_patches:
+                new_text, n, err = _apply_subs(text, p)
+                if err:
+                    print(f"  {R}fail{X}  {p['id']:40s}  {err}")
+                    fail += 1
+                    continue
+                msg = "no-op (already applied)" if new_text == text else f"{n} replacement(s)"
+                print(f"  {G}ok{X}    {p['id']:40s}  {msg}")
+                text = new_text
+                ok  += 1
+
+            if text != orig and not args.dry_run:
+                ok2, err = write_bun_js(target, text)
+                if not ok2:
+                    print(f"  {R}fail{X}  [bun-inject]  {err}")
+                    fail += 1
+            elif text != orig and args.dry_run:
+                print(f"  {Y}dry-run: binary not modified{X}")
+    else:
+        # cli.js path — patch file directly
+        text = target.read_text(encoding="utf-8")
+        orig = text
+        for p in js_patches:
+            new_text, n, err = _apply_subs(text, p)
+            if err:
+                print(f"  {R}fail{X}  {p['id']:40s}  {err}")
+                fail += 1
+                continue
+            msg = "no-op (already applied)" if new_text == text else f"{n} replacement(s)"
+            print(f"  {G}ok{X}    {p['id']:40s}  {msg}")
+            text = new_text
+            ok  += 1
+        if text != orig and not args.dry_run:
+            target.write_text(text, encoding="utf-8")
+            r = subprocess.run(["node", "--check", str(target)],
+                               capture_output=True, text=True, timeout=15)
+            if r.returncode != 0:
+                print(f"\n{R}✗ cli.js syntax INVALID — rollback recommended{X}")
+                return 2
+
+    # ── non-JS patches ─────────────────────────────────────────────────────
+    for p in meta_patches:
+        t = p.get("type")
+        if t in ("settings", "hook"):
+            success, msg = _apply_settings(p, dry_run=args.dry_run)
+            mark = f"{G}ok{X}" if success else f"{R}fail{X}"
+            print(f"  {mark}   {p['id']:40s}  {msg}")
+            ok += success; fail += not success
+        else:
+            # mcp_guard / wrapper / binary_install — skip in standalone vpcc
+            print(f"  {Y}skip{X} {p['id']:40s}  type={t} (use void-patcher for full support)")
+            skip += 1
+
+    print(f"\n{B}{ok} ok · {fail} failed · {skip} skipped{X}")
+    return 1 if fail else 0
+
+
+def _apply_settings(patch: dict, dry_run: bool = False) -> tuple[bool, str]:
     path = Path(os.path.expanduser(patch.get("settings_path", "~/.claude/settings.json")))
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -119,8 +282,11 @@ def apply_settings(patch: dict[str, Any], dry_run: bool = False) -> tuple[bool, 
     except json.JSONDecodeError:
         cur = {}
     wanted = patch.get("settings", {})
-    changed = 0
     out = dict(cur)
+    changed = sum(1 for k, v in wanted.items() if out.setdefault(k, None) != v and not out.__setitem__(k, v))  # type: ignore
+    # simpler:
+    out = dict(cur)
+    changed = 0
     for k, v in wanted.items():
         if out.get(k) != v:
             out[k] = v
@@ -130,78 +296,25 @@ def apply_settings(patch: dict[str, Any], dry_run: bool = False) -> tuple[bool, 
     if dry_run:
         return True, f"would set {changed} key(s)"
     path.write_text(json.dumps(out, indent=2))
-    return True, f"{changed} key(s) applied"
-
-
-def backup(cli_js: Path) -> Path:
-    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    dst = BACKUP_DIR / f"cli.js.{stamp}.{sha256_short(cli_js)}.bak"
-    shutil.copy2(cli_js, dst)
-    # prune: keep last 10
-    baks = sorted(BACKUP_DIR.glob("cli.js.*.bak"))
-    for b in baks[:-10]:
-        b.unlink(missing_ok=True)
-    return dst
-
-
-# ── commands ─────────────────────────────────────────────────────────────────
-
-def cmd_patch(args) -> int:
-    patches = load_patches()
-    print(f"{B}vpcc patch — {len(patches)} patches{X}")
-
-    # Always try settings patches (target cli.js separately)
-    cli_js = find_cli_js() if any(p.get("type") == "js_replace" for p in patches) else None
-
-    if cli_js:
-        print(f"  target: {cli_js}  (sha: {sha256_short(cli_js)})")
-        if not args.dry_run:
-            bkp = backup(cli_js)
-            print(f"  backup: {bkp}")
-
-    ok = fail = skip = 0
-    for p in patches:
-        t = p.get("type")
-        if t == "js_replace":
-            if not cli_js:
-                print(f"  {Y}skip{X} {p['id']:40s}  cli.js not found")
-                skip += 1
-                continue
-            success, msg = apply_js_replace(cli_js, p, dry_run=args.dry_run)
-        elif t == "settings":
-            success, msg = apply_settings(p, dry_run=args.dry_run)
-        elif t == "hook":
-            # Lightweight hook: write file literal to settings_path
-            success, msg = apply_settings(p, dry_run=args.dry_run)
-        else:
-            success, msg = False, f"unsupported type: {t}"
-
-        mark = f"{G}ok{X}" if success else f"{R}fail{X}"
-        print(f"  {mark}   {p['id']:40s}  {msg}")
-        ok += success; fail += not success
-
-    # Post-apply syntax check
-    if cli_js and not args.dry_run:
-        if node_syntax_check(cli_js):
-            print(f"{G}✓ cli.js syntax valid{X}")
-        else:
-            print(f"{R}✗ cli.js syntax INVALID — restore from backup if broken{X}")
-            return 2
-
-    print(f"\n{B}{ok} ok · {fail} failed · {skip} skipped{X}")
-    return 1 if fail else 0
+    return True, f"{changed} key(s)"
 
 
 def cmd_verify(args) -> int:
-    cli_js = find_cli_js()
-    if not cli_js:
-        print(f"{R}cli.js not found{X}")
+    target, kind = find_target()
+    if not target:
+        print(f"{R}claude-code not found{X}")
         return 2
-    text = cli_js.read_text()
-    patches = load_patches()
+
+    if kind == "bun_sea":
+        text, err = read_bun_js(target)
+        if text is None:
+            print(f"{R}bun extract failed: {err}{X}")
+            return 2
+    else:
+        text = target.read_text(encoding="utf-8")
+
     missing = 0
-    for p in patches:
+    for p in load_patches():
         if p.get("type") != "js_replace":
             continue
         for sub in p.get("patches", []):
@@ -210,79 +323,77 @@ def cmd_verify(args) -> int:
                 print(f"{R}✗{X} {p['id']}")
                 missing += 1
                 break
+
     if missing:
-        print(f"\n{R}{missing} patches not applied{X}")
+        print(f"\n{R}{missing} patches missing{X}")
         return 1
     print(f"{G}✓ all patches verified{X}")
     return 0
 
 
 def cmd_rollback(args) -> int:
-    cli_js = find_cli_js()
-    if not cli_js:
-        print(f"{R}cli.js not found{X}")
+    target, kind = find_target()
+    if not target:
+        print(f"{R}claude-code not found{X}")
         return 2
-    baks = sorted(BACKUP_DIR.glob("cli.js.*.bak"))
+    baks = sorted(BACKUP_DIR.glob("claude.*.bak"))
     if not baks:
         print(f"{R}no backups in {BACKUP_DIR}{X}")
         return 1
     latest = baks[-1]
-    shutil.copy2(latest, cli_js)
-    print(f"{G}✓ restored{X} {cli_js} ← {latest.name}")
+    mode = target.stat().st_mode & 0o7777
+    target.unlink()
+    shutil.copy2(latest, target)
+    target.chmod(mode)
+    print(f"{G}✓ restored{X} {target} ← {latest.name}")
     return 0
 
 
 def cmd_status(args) -> int:
-    cli_js = find_cli_js()
+    target, kind = find_target()
     patches = load_patches()
     print(f"{B}vpcc status{X}")
-    print(f"  patches in catalog: {len(patches)}")
-    print(f"  cli.js: {cli_js or 'NOT FOUND'}")
-    if cli_js:
-        print(f"  sha: {sha256_short(cli_js)}")
-        print(f"  node syntax: {'ok' if node_syntax_check(cli_js) else 'INVALID'}")
-    baks = sorted(BACKUP_DIR.glob("cli.js.*.bak"))
-    print(f"  backups: {len(baks)}  ({BACKUP_DIR})")
+    print(f"  patches : {len(patches)}")
+    if target:
+        label = "cli.js (JS, ≤v2.1.112)" if kind == "js" else "Bun SEA ELF (≥v2.1.114)"
+        print(f"  target  : {target}")
+        print(f"  format  : {label}")
+        print(f"  sha256  : {sha256_short(target)}")
+        print(f"  size    : {target.stat().st_size // 1024 // 1024} MB")
+    else:
+        print(f"  target  : {R}NOT FOUND{X}")
+    baks = sorted(BACKUP_DIR.glob("claude.*.bak"))
+    print(f"  backups : {len(baks)}  ({BACKUP_DIR})")
     return 0
 
 
 def cmd_list(args) -> int:
-    patches = load_patches()
-    for p in patches:
+    for p in load_patches():
         print(f"  {p['id']:40s}  {p.get('description','')}")
     return 0
 
 
-# ── entry ────────────────────────────────────────────────────────────────────
+# ── entry ─────────────────────────────────────────────────────────────────────
 
 def main() -> int:
     ap = argparse.ArgumentParser(
         prog="vpcc",
-        description="Void Patcher for Claude Code — apply 39 hardening patches to cli.js",
+        description="Void Patcher for Claude Code — regex-signature patches, cli.js + Bun SEA",
     )
     sub = ap.add_subparsers(dest="cmd", metavar="command")
-
     p_patch = sub.add_parser("patch", help="Apply all patches")
     p_patch.add_argument("--dry-run", "-n", action="store_true")
-
-    sub.add_parser("verify",   help="Check all patches are applied")
-    sub.add_parser("rollback", help="Restore cli.js from most recent backup")
+    sub.add_parser("verify",   help="Check patches are applied")
+    sub.add_parser("rollback", help="Restore from most recent backup")
     sub.add_parser("status",   help="Show install state")
     sub.add_parser("list",     help="List patches in catalog")
-
     args = ap.parse_args()
     if args.cmd is None:
         ap.print_help()
         return 0
-
-    dispatch = {
-        "patch":    cmd_patch,
-        "verify":   cmd_verify,
-        "rollback": cmd_rollback,
-        "status":   cmd_status,
-        "list":     cmd_list,
-    }
-    return dispatch[args.cmd](args)
+    return {"patch": cmd_patch, "verify": cmd_verify,
+            "rollback": cmd_rollback, "status": cmd_status,
+            "list": cmd_list}[args.cmd](args)
 
 
 if __name__ == "__main__":
