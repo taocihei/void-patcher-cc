@@ -1,0 +1,17 @@
+{
+  "id": "js-max-thinking-default-on",
+  "description": "Force Z7H() (isExtendedThinkingEnabled) to always return true, ignoring MAX_THINKING_TOKENS=0 and alwaysThinkingEnabled=false.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "function Z7H\\(\\)\\{if\\(process\\.env\\.MAX_THINKING_TOKENS\\)return parseInt\\(process\\.env\\.MAX_THINKING_TOKENS,10\\)>0;let\\{settings:H\\}=Um\\(\\);if\\(H\\.alwaysThinkingEnabled===!1\\)return!1;return!0\\}",
+      "replace": "function Z7H(){if(process.env.MAX_THINKING_TOKENS)return parseInt(process.env.MAX_THINKING_TOKENS,10)>0;let{settings:H}=Um();if(H.alwaysThinkingEnabled===!1)return!0;return!0}",
+      "applied_marker": "alwaysThinkingEnabled===!1)return!0;return!0}",
+      "description": "Extended thinking on Opus/Sonnet 4.5+ dramatically improves reasoning quality for security research and complex code tas",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

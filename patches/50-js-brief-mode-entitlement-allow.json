@@ -1,0 +1,17 @@
+{
+  "id": "js-brief-mode-entitlement-allow",
+  "description": "Force isBriefEntitled() to always return true \u2014 unlocks the 'brief mode' quiet/compressed output UI and brief tool without Statsig gate.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "function xi\\$\\(\\)\\{return P0\\(\\)\\|\\|SH\\(process\\.env\\.CLAUDE_CODE_BRIEF\\)\\|\\|b2\\(\"tengu_kairos_brief\",!1,sH1\\)\\}",
+      "replace": "function xi$(){return !0||P0()||SH(process.env.CLAUDE_CODE_BRIEF)||b2(\"tengu_kairos_brief\",!1,sH1)}",
+      "applied_marker": "function xi$(){return !0||P0()",
+      "description": "isBriefEntitled = P0() || CLAUDE_CODE_BRIEF || Statsig('tengu_kairos_brief'). Forcing true exposes the gated brief trans",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

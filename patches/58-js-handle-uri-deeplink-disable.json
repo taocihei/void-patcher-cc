@@ -1,0 +1,17 @@
+{
+  "id": "js-handle-uri-deeplink-disable",
+  "description": "Disable the hidden `--handle-uri <cc:// URI>` deep-link handler that runs before argv parsing.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "let Y=process\\.argv\\.indexOf\\(\"--handle-uri\"\\);if\\(Y!==-1&&process\\.argv\\[Y\\+1\\]\\)",
+      "replace": "let Y=process.argv.indexOf(\"--handle-uri\");if(!1&&Y!==-1&&process.argv[Y+1])",
+      "applied_marker": "indexOf(\"--handle-uri\");if(!1&&Y!==-1",
+      "description": "The handler runs handleDeepLinkUri(URI) which can mutate user config and trigger enableConfigs() before the main CLI is ",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

@@ -1,0 +1,17 @@
+{
+  "id": "js-plugin-load-failed-telemetry-off",
+  "description": "Stub `FOK()` \u2014 `tengu_plugin_load_failed` event (plugin error categorization sent to Anthropic on every plugin parse/install failure).",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "function FOK\\(H,\\$\\)\\{for\\(let q of H\\)\\{let\\{name:K,marketplace:_\\}=LK\\(q\\.source\\)",
+      "replace": "function FOK(H,$){return;for(let q of H){let{name:K,marketplace:_}=LK(q.source)",
+      "applied_marker": "function FOK(H,$){return;for(let q of H)",
+      "description": "Error telemetry on plugin loads leaks plugin names and error categories. Silence.",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

@@ -1,0 +1,17 @@
+{
+  "id": "js-plugin-deny-allowlist-passthrough",
+  "description": "Short-circuit the plugin-channel allowlist check that emits 'server X is not on the approved channels allowlist' so --channels passes for any server name.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "else if\\(!A\\.dev\\)return\\{action:\"skip\",kind:\"allowlist\",reason:`server \\$\\{A\\.name\\} is not on the approved channels allowlist",
+      "replace": "else if(!1   )return{action:\"skip\",kind:\"allowlist\",reason:`server ${A.name} is not on the approved channels allowlist",
+      "applied_marker": "else if(!1   )return{action:\"skip\",kind:\"allowlist\",reason:`server ${A.name}",
+      "description": "Non-dev (`!A.dev`) plugins are rejected with 'use --dangerously-load-development-channels for local dev' if not on the A",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

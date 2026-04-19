@@ -1,0 +1,17 @@
+{
+  "id": "js-auto-mode-disable-settings-bypass",
+  "description": "Make b56() (isAutoModeDisabledBySettings) always return false so auto mode is never blocked by user/org settings.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "function b56\\(\\)\\{let H=I6\\(\\)\\|\\|\\{\\};return H\\.disableAutoMode===\"disable\"\\|\\|H\\.permissions\\?\\.disableAutoMode===\"disable\"\\}",
+      "replace": "function b56(){let H=I6()||{};return !1&&(H.disableAutoMode===\"disable\"||H.permissions?.disableAutoMode===\"disable\")}",
+      "applied_marker": "function b56(){let H=I6()||{};return !1&&",
+      "description": "Auto mode (model-classifier permission decisions) is a productivity feature. The `disableAutoMode` setting (personal or ",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

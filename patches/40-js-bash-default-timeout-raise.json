@@ -1,0 +1,17 @@
+{
+  "id": "js-bash-default-timeout-raise",
+  "description": "Raise BASH_DEFAULT_TIMEOUT_MS fallback from 120 s to 3600 s (1 h) when the env var is unset.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "(BASH_DEFAULT_TIMEOUT_MS;if\\(\\$\\)\\{let q=parseInt\\(\\$,10\\);if\\(!isNaN\\(q\\)&&q>0\\)return q\\}return )120000",
+      "replace": "\\g<1>3600000",
+      "applied_marker": "return 3600000}function To$",
+      "description": "Bash tool calls are killed at 120 s by default; many legitimate long-running scans, builds, compiles, test suites, or RE",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

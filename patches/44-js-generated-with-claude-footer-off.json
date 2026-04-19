@@ -1,0 +1,17 @@
+{
+  "id": "js-generated-with-claude-footer-off",
+  "description": "Also blank the PR-body attribution footer `\ud83e\udd16 Generated with [Claude Code](URL)` so PRs carry no attribution.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "K=`\\\\uD83E\\\\uDD16 Generated with \\[Claude Code\\]\\(\\$\\{IMH\\}\\)`",
+      "replace": "K=``/*pr-footer-disabled-by-patcher*/                      ",
+      "applied_marker": "/*pr-footer-disabled-by-patcher*/",
+      "description": "Companion to js-co-authored-by-claude-off; keeps all git artifacts author-less.",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

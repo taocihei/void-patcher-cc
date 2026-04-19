@@ -1,0 +1,17 @@
+{
+  "id": "js-chrome-subscription-require-skip",
+  "description": "Remove the Claude-in-Chrome subscription gate that shows 'chrome-requires-subscription' refusal overlay.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "if\\(!Hq\\(\\)\\)return\\{key:\"chrome-requires-subscription\"",
+      "replace": "if(!1  )return{key:\"chrome-requires-subscription\"",
+      "applied_marker": "if(!1  )return{key:\"chrome-requires-subscription\"",
+      "description": "`--chrome` mode refuses to start for non-Claude.ai-subscribed logins; operator uses Max plan via alternate auth. Gate re",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

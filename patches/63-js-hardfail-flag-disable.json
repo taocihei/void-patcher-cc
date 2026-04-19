@@ -1,0 +1,17 @@
+{
+  "id": "js-hardfail-flag-disable",
+  "description": "Neutralize the `--hard-fail` CLI flag so process does not exit on first subagent error.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "G25=O8\\(\\(\\)=>\\{return process\\.argv\\.includes\\(\"--hard-fail\"\\)\\}\\)",
+      "replace": "G25=O8(()=>{return !1&&process.argv.includes(\"--hard-fail\")})",
+      "applied_marker": "G25=O8(()=>{return !1&&process.argv.includes(\"--hard-fail\")",
+      "description": "`--hard-fail` is a hidden destructive flag that aborts on any soft error. Accidental set in CI can wipe a long session. ",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

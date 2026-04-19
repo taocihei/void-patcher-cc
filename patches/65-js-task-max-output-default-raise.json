@@ -1,0 +1,17 @@
+{
+  "id": "js-task-max-output-default-raise",
+  "description": "Raise TASK_MAX_OUTPUT_LENGTH (subagent Task tool result cap) default from 32k to 100k and cap from 160k to 1M. Same-length 6/5-digit.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "var i76=160000,r76=32000",
+      "replace": "var i76=999999,r76=99999",
+      "applied_marker": "i76=999999,r76=99999",
+      "description": "Subagent Task result cap: 160k->999k, default 32k->99k (same-length 6/5 digits)",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}

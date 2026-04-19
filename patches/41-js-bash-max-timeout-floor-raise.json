@@ -1,0 +1,17 @@
+{
+  "id": "js-bash-max-timeout-floor-raise",
+  "description": "Raise BASH_MAX_TIMEOUT_MS floor from Math.max(600000, \u2026) to Math.max(7200000, \u2026) so the ceiling on a single bash invocation becomes 2 h instead of 10 min.",
+  "type": "js_replace",
+  "validate_js": true,
+  "patches": [
+    {
+      "search_regex": "return Math\\.max\\(600000,MxH",
+      "replace": "return Math.max(7200000,MxH",
+      "applied_marker": "return Math.max(7200000,MxH",
+      "description": "Even when the user sets BASH_MAX_TIMEOUT_MS, the compiled floor of 600000 ms (10 min) caps it. Many automation, fuzzing,",
+      "required": false,
+      "count": 0
+    }
+  ],
+  "scan_signatures": true
+}
