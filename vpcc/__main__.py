@@ -318,6 +318,8 @@ def cmd_verify(args) -> int:
         if p.get("type") != "js_replace":
             continue
         for sub in p.get("patches", []):
+            if not sub.get("required", True):
+                continue
             marker = sub.get("applied_marker")
             if marker and marker not in text:
                 print(f"{R}✗{X} {p['id']}")
