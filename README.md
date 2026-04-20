@@ -44,16 +44,21 @@
 <tr>
 <td width="50%" valign="top">
 
-### 🎯 TL;DR
+### 🎯 TL;DR · one-liner install
 
-```
-pipx install git+https://github.com/VoidChecksum/void-patcher-cc
-vpcc patch
-vpcc install-preload
-vpcc watch -i 10 &
+**macOS · Linux · WSL**
+```bash
+curl -fsSL https://raw.githubusercontent.com/VoidChecksum/void-patcher-cc/main/install.sh | bash
 ```
 
-Every permission prompt, refusal, AUP gate, classifier, telemetry sink **off**.
+**Windows (PowerShell 5.1+/7+)**
+```powershell
+irm https://raw.githubusercontent.com/VoidChecksum/void-patcher-cc/main/install.ps1 | iex
+```
+
+Chains on top of Anthropic's official installer, then applies 77 patches, deploys the runtime preload hook, and (Linux) enables the systemd auto-heal timer.
+
+Every permission prompt · refusal · AUP gate · classifier · telemetry sink **off**.
 Every CC upgrade **auto-heals**.
 
 </td>
@@ -143,12 +148,12 @@ When ② drifts, `vpcc scan --auto-heal` rewrites it from ①'s context window. 
 
 <div align="center">
 
-| CC version      | Format            | Size   | Coverage | AUP bypass | Status      |
-|:---------------:|:-----------------:|-------:|---------:|:----------:|:-----------:|
-| 2.0.x           | `cli.js` (Node)   |  20 MB | 62 / 77  | ✅          | legacy      |
-| 2.1.0 – 2.1.112 | `cli.js` (Node)   |  26 MB | 70 / 77  | ✅          | stable      |
-| **2.1.114**     | **Bun SEA ELF**   | 236 MB | **77/77**| ✅          | **current** |
-| 2.1.115+        | Bun SEA (expect)  |   —    | auto-heal| ✅          | watch mode  |
+| CC version      | Format               | OS support                 | Size   | Coverage | AUP bypass | Status      |
+|:---------------:|:--------------------:|:--------------------------:|-------:|---------:|:----------:|:-----------:|
+| 2.0.x           | `cli.js` (Node)      | Lin · mac · Win · WSL      |  20 MB | 62 / 77  | ✅          | legacy      |
+| 2.1.0 – 2.1.112 | `cli.js` (Node)      | Lin · mac · Win · WSL      |  26 MB | 70 / 77  | ✅          | stable      |
+| **2.1.114**     | **Bun SEA (ELF / Mach-O / PE)** | **Lin · mac (x64/arm64) · Win (x64/arm64) · WSL** | 236 MB | **77/77** | ✅ | **current** |
+| 2.1.115+        | Bun SEA (expected)   | all                        |   —    | auto-heal| ✅          | watch mode  |
 
 </div>
 
@@ -158,41 +163,64 @@ When ② drifts, `vpcc scan --auto-heal` rewrites it from ①'s context window. 
 
 ## 📦 Install
 
+### One-liner (recommended)
+
 <table>
-<tr>
-<td>
+<tr><td><b>macOS · Linux · WSL</b></td><td>
 
 ```bash
-# recommended — isolated
+curl -fsSL https://raw.githubusercontent.com/VoidChecksum/void-patcher-cc/main/install.sh | bash
+```
+
+</td></tr>
+<tr><td><b>Windows PowerShell</b></td><td>
+
+```powershell
+irm https://raw.githubusercontent.com/VoidChecksum/void-patcher-cc/main/install.ps1 | iex
+```
+
+</td></tr>
+</table>
+
+Both scripts are idempotent — re-run to update. They:
+1. Install Claude Code via Anthropic's official installer if missing (`https://claude.ai/install.sh` / `install.ps1`).
+2. Install `pipx` if missing.
+3. Install `vpcc` from GitHub.
+4. Clone `contrib/` assets (preload hook, systemd units, Windows wrappers).
+5. Run `vpcc patch` + `vpcc install-preload`.
+6. Enable `systemd --user vpcc-autoheal.timer` (Linux) / add `claude.cmd` wrapper to user PATH (Windows).
+
+### Manual
+
+```bash
 pipx install git+https://github.com/VoidChecksum/void-patcher-cc
+vpcc patch && vpcc install-preload
 
 # editable dev
 git clone https://github.com/VoidChecksum/void-patcher-cc
-cd void-patcher-cc
-pipx install -e .
+cd void-patcher-cc && pipx install -e . --force
 
 # uninstall
 pipx uninstall vpcc
 ```
 
-</td>
-<td>
+### Requirements (per OS)
 
-**Requires**
+| OS           | Prereqs                                       | CC binary location (auto-detected)                                     |
+|:------------:|-----------------------------------------------|------------------------------------------------------------------------|
+| **Linux**    | `python3` ≥ 3.9 · `npm` · `curl`              | npm global · `/opt/claude-code/bin/claude` · `~/.claude/local/claude`  |
+| **macOS**    | `python3` ≥ 3.9 · `npm` · `curl`              | npm global · Homebrew · `~/.claude/local/claude` (x64 + arm64 + Rosetta)|
+| **Windows**  | PowerShell 5.1+/7+ · `python` ≥ 3.9 · `npm`   | `%APPDATA%\npm\node_modules\...` · `%LOCALAPPDATA%\Programs\claude-code\claude.exe` |
+| **WSL**      | as Linux                                      | WSL file tree                                                          |
 
-- Python ≥ 3.9 (stdlib only · zero deps)
-- `node` *only* for cli.js `--check` (legacy)
-- `npm` global `@anthropic-ai/claude-code` installed
+### State & data files
 
-**Produces**
-
-- `~/.vpcc/state.json` (patch commit, last CC sha)
-- `~/.vpcc/backups/` (10 most recent)
-- `~/.local/share/void-patcher/claude-preload.js`
-
-</td>
-</tr>
-</table>
+| Path                                          | Purpose                           |
+|-----------------------------------------------|-----------------------------------|
+| `~/.vpcc/state.json`                          | patch commit · last CC sha        |
+| `~/.vpcc/backups/`                            | 10 most recent target backups     |
+| `~/.local/share/void-patcher/claude-preload.js` (linux/macOS) · `%LOCALAPPDATA%\void-patcher\claude-preload.js` (Windows) | runtime preload hook |
+| `~/.config/systemd/user/vpcc-autoheal.timer`  | Linux auto-heal trigger           |
 
 ---
 

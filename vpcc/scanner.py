@@ -107,29 +107,16 @@ class SigScanner:
 # helpers --------------------------------------------------------------------
 
 def load_text_from_target(target: Path, kind: str) -> str:
-    """Extract patchable text from cli.js or Bun SEA .bun section."""
+    """Extract patchable text from cli.js or Bun SEA .bun section.
+    Cross-platform: dispatches ELF / Mach-O / PE by magic bytes.
+    Delegates to vpcc.__main__._find_bun_section to avoid duplication.
+    """
     if kind == "js":
         return target.read_text(encoding="utf-8", errors="surrogateescape")
-
-    import struct as _struct
+    from . import __main__ as _m
     data = bytearray(target.read_bytes())
-    e_shoff     = _struct.unpack_from("<Q", data, 0x28)[0]
-    e_shentsize = _struct.unpack_from("<H", data, 0x3A)[0]
-    e_shnum     = _struct.unpack_from("<H", data, 0x3C)[0]
-    e_shstrndx  = _struct.unpack_from("<H", data, 0x3E)[0]
-    strtab_shdr = e_shoff + e_shstrndx * e_shentsize
-    strtab_off  = _struct.unpack_from("<Q", data, strtab_shdr + 0x18)[0]
-    strtab_size = _struct.unpack_from("<Q", data, strtab_shdr + 0x20)[0]
-    strtab      = bytes(data[strtab_off:strtab_off + strtab_size])
-    for i in range(e_shnum):
-        sh = e_shoff + i * e_shentsize
-        sh_name = _struct.unpack_from("<I", data, sh)[0]
-        end = strtab.index(b"\x00", sh_name)
-        if strtab[sh_name:end] == b".bun":
-            off  = _struct.unpack_from("<Q", data, sh + 0x18)[0]
-            size = _struct.unpack_from("<Q", data, sh + 0x20)[0]
-            return bytes(data[off:off + size]).decode("utf-8", errors="surrogateescape")
-    raise RuntimeError(".bun section not found")
+    off, size = _m._find_bun_section(data)
+    return bytes(data[off:off + size]).decode("utf-8", errors="surrogateescape")
 
 
 def format_scan_report(rows: list[dict[str, Any]], verbose: bool = False) -> str:

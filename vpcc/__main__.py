@@ -56,25 +56,96 @@ def _version_glob(base: Path, suffix: str) -> list[Path]:
 
 
 def find_target() -> tuple[Path | None, str]:
-    """Return (path, kind) — kind is 'js' or 'bun_sea'. js preferred, binary fallback."""
-    checks = [
-        (_PKG + "/cli.js", "js"),
+    """Return (path, kind) — kind is 'js' or 'bun_sea'.
+    Enumerates every CC packaging: legacy cli.js, Linux/macOS/Windows SEA.
+    """
+    # Primary cli.js (legacy, all OS)
+    js_checks  = [(_PKG + "/cli.js", "js")]
+    # Direct bin/ wrappers inside the main pkg
+    bin_checks = [
         (_PKG + "/bin/claude.exe", "bun_sea"),
-        (_PKG + "/bin/claude", "bun_sea"),
+        (_PKG + "/bin/claude",     "bun_sea"),
     ]
+    # Platform-specific sub-packages (npm optionalDependencies pattern)
+    sub_checks = [
+        (_PKG + "/node_modules/@anthropic-ai/claude-code-linux-x64/claude",    "bun_sea"),
+        (_PKG + "/node_modules/@anthropic-ai/claude-code-linux-arm64/claude",  "bun_sea"),
+        (_PKG + "/node_modules/@anthropic-ai/claude-code-darwin-x64/claude",   "bun_sea"),
+        (_PKG + "/node_modules/@anthropic-ai/claude-code-darwin-arm64/claude", "bun_sea"),
+        (_PKG + "/node_modules/@anthropic-ai/claude-code-win32-x64/claude.exe","bun_sea"),
+        (_PKG + "/node_modules/@anthropic-ai/claude-code-win32-arm64/claude.exe","bun_sea"),
+    ]
+    checks = js_checks + sub_checks + bin_checks
+
     for npm_root in _npm_global_roots():
         for suffix, kind in checks:
             p = npm_root / suffix
             if p.exists() and (kind == "js" or p.stat().st_size > 1_000_000):
                 return p, kind
 
+    # Version-managed Node installs
     mise_base = Path.home() / ".local/share/mise/installs/node"
     nvm_base  = Path(os.environ.get("NVM_DIR", Path.home() / ".nvm")) / "versions/node"
-    for base in [mise_base, nvm_base]:
+    # Windows %APPDATA%\npm
+    appdata   = os.environ.get("APPDATA")
+    extra_bases = [mise_base, nvm_base]
+    if appdata:
+        extra_bases.append(Path(appdata) / "npm" / "node_modules")
+        extra_bases.append(Path(appdata) / "npm")
+
+    for base in extra_bases:
         for suffix, kind in checks:
-            for p in _version_glob(base, suffix):
+            if base == extra_bases[0] or base == extra_bases[1]:
+                # mise / nvm wrap each Node version in its own dir
+                candidates = _version_glob(base, suffix)
+            else:
+                candidates = [base / suffix] if (base / suffix).exists() else []
+            for p in candidates:
                 if p.exists() and (kind == "js" or p.stat().st_size > 1_000_000):
                     return p, kind
+
+    # Homebrew on macOS
+    for hb in [Path("/opt/homebrew/lib/node_modules"),
+               Path("/usr/local/lib/node_modules")]:
+        for suffix, kind in checks:
+            p = hb / suffix
+            if p.exists() and (kind == "js" or p.stat().st_size > 1_000_000):
+                return p, kind
+
+    # Native installer (https://claude.ai/install.sh) lands the binary in
+    # ~/.claude/ or ~/.local/share/claude-code/. Enumerate common targets.
+    native_candidates = [
+        Path.home() / ".claude/local/claude",
+        Path.home() / ".claude/local/claude.exe",
+        Path.home() / ".claude/bin/claude",
+        Path.home() / ".claude/bin/claude.exe",
+        Path.home() / ".claude/downloads",          # may contain claude-<ver>-<platform> blobs
+        Path.home() / ".local/share/claude-code/claude",
+        Path.home() / ".local/share/claude-code/claude.exe",
+        Path.home() / ".local/bin/claude-code",
+        Path.home() / ".local/bin/claude-code.exe",
+        Path("/usr/local/share/claude-code/claude"),
+        Path("/opt/claude-code/bin/claude"),
+        Path("/opt/claude-code/bin/claude.exe"),
+    ]
+    for p in native_candidates:
+        if p.is_dir():
+            for child in sorted(p.glob("claude-*"), reverse=True):
+                if child.is_file() and child.stat().st_size > 1_000_000:
+                    return child, "bun_sea"
+            continue
+        if p.exists() and p.stat().st_size > 1_000_000:
+            return p, "bun_sea"
+
+    # Windows %LOCALAPPDATA%\Programs\claude-code\ (installer default on Win)
+    la = os.environ.get("LOCALAPPDATA")
+    if la:
+        for suffix in ("Programs/claude-code/claude.exe",
+                       "claude-code/claude.exe",
+                       "anthropic/claude-code/claude.exe"):
+            p = Path(la) / suffix
+            if p.exists() and p.stat().st_size > 1_000_000:
+                return p, "bun_sea"
 
     return None, ""
 
@@ -99,8 +170,8 @@ def _bun_section_is_bytecode(section_bytes: bytes) -> bool:
     return b"// @bun @bytecode" in section_bytes[:1024]
 
 
-def _find_bun_section(data) -> tuple[int, int]:
-    """Locate .bun ELF section via direct shdr walk. Returns (file_offset, size)."""
+def _find_bun_section_elf(data) -> tuple[int, int]:
+    """Linux ELF — shdr walk for .bun section."""
     e_shoff     = _struct.unpack_from("<Q", data, 0x28)[0]
     e_shentsize = _struct.unpack_from("<H", data, 0x3A)[0]
     e_shnum     = _struct.unpack_from("<H", data, 0x3C)[0]
@@ -116,7 +187,107 @@ def _find_bun_section(data) -> tuple[int, int]:
         if strtab[sh_name:end] == b".bun":
             return (_struct.unpack_from("<Q", data, sh + 0x18)[0],
                     _struct.unpack_from("<Q", data, sh + 0x20)[0])
-    raise RuntimeError(".bun section not found")
+    raise RuntimeError(".bun section not found (ELF)")
+
+
+def _find_bun_section_macho(data) -> tuple[int, int]:
+    """
+    macOS Mach-O (x64 + arm64, both endian + fat).
+    Walks LC_SEGMENT_64 load commands looking for section named `__bun`
+    (segname `__BUN` — Bun's SEA embedding convention).
+    """
+    magic = _struct.unpack_from(">I", data, 0)[0]
+    # Fat binary — pick first 64-bit arch entry.
+    if magic in (0xCAFEBABE, 0xBEBAFECA, 0xCAFEBABF, 0xBFBAFECA):
+        big = magic in (0xCAFEBABE, 0xCAFEBABF)
+        fmt = ">I" if big else "<I"
+        nfat = _struct.unpack_from(fmt, data, 4)[0]
+        # each fat_arch is 20 bytes (32-bit) or 32 bytes (64-bit)
+        entry_size = 20 if magic in (0xCAFEBABE, 0xBEBAFECA) else 32
+        for i in range(nfat):
+            base = 8 + i * entry_size
+            off = _struct.unpack_from(fmt, data, base + 8)[0]
+            # recurse into slice
+            sub = data[off:] if hasattr(data, "__getitem__") else bytes(data)[off:]
+            return _find_bun_section_macho(bytes(sub))
+    if magic not in (0xFEEDFACF, 0xCFFAEDFE, 0xFEEDFACE, 0xCEFAEDFE):
+        raise RuntimeError("not a Mach-O binary")
+    is_64 = magic in (0xFEEDFACF, 0xCFFAEDFE)
+    be = magic in (0xFEEDFACF, 0xFEEDFACE)
+    end = ">" if be else "<"
+    # header: magic(4) cputype(4) cpusubtype(4) filetype(4) ncmds(4) sizeofcmds(4) flags(4) [reserved(4) if 64]
+    ncmds = _struct.unpack_from(end + "I", data, 16)[0]
+    hdr_size = 32 if is_64 else 28
+    cur = hdr_size
+    LC_SEGMENT_64 = 0x19
+    LC_SEGMENT    = 0x01
+    for _ in range(ncmds):
+        cmd, cmdsize = _struct.unpack_from(end + "II", data, cur)
+        if cmd == LC_SEGMENT_64:
+            # segment_command_64: cmd(4) cmdsize(4) segname(16) vmaddr(8) vmsize(8) fileoff(8) filesize(8) maxprot(4) initprot(4) nsects(4) flags(4) = 72
+            segname = bytes(data[cur+8:cur+24]).split(b"\x00", 1)[0]
+            nsects  = _struct.unpack_from(end + "I", data, cur + 64)[0]
+            sect_base = cur + 72
+            for j in range(nsects):
+                # section_64: sectname(16) segname(16) addr(8) size(8) offset(4) align(4) reloff(4) nreloc(4) flags(4) reserved1(4) reserved2(4) reserved3(4) = 80
+                s = sect_base + j * 80
+                sectname = bytes(data[s:s+16]).split(b"\x00", 1)[0]
+                sect_segname = bytes(data[s+16:s+32]).split(b"\x00", 1)[0]
+                if sectname in (b"__bun", b".bun") or sect_segname in (b"__BUN",):
+                    size   = _struct.unpack_from(end + "Q", data, s + 40)[0]
+                    offset = _struct.unpack_from(end + "I", data, s + 48)[0]
+                    return (offset, size)
+        elif cmd == LC_SEGMENT:
+            segname = bytes(data[cur+8:cur+24]).split(b"\x00", 1)[0]
+            nsects  = _struct.unpack_from(end + "I", data, cur + 48)[0]
+            sect_base = cur + 56
+            for j in range(nsects):
+                s = sect_base + j * 68
+                sectname = bytes(data[s:s+16]).split(b"\x00", 1)[0]
+                if sectname in (b"__bun", b".bun"):
+                    size   = _struct.unpack_from(end + "I", data, s + 36)[0]
+                    offset = _struct.unpack_from(end + "I", data, s + 40)[0]
+                    return (offset, size)
+        cur += cmdsize
+    raise RuntimeError(".bun/__bun section not found (Mach-O)")
+
+
+def _find_bun_section_pe(data) -> tuple[int, int]:
+    """Windows PE/COFF — walks section table for .bun section."""
+    if data[:2] != b"MZ":
+        raise RuntimeError("not a PE binary")
+    pe_off = _struct.unpack_from("<I", data, 0x3C)[0]
+    if bytes(data[pe_off:pe_off+4]) != b"PE\x00\x00":
+        raise RuntimeError("PE signature missing")
+    coff = pe_off + 4
+    nsect = _struct.unpack_from("<H", data, coff + 2)[0]
+    opt_size = _struct.unpack_from("<H", data, coff + 16)[0]
+    sect_table = coff + 20 + opt_size
+    # each IMAGE_SECTION_HEADER = 40 bytes
+    for i in range(nsect):
+        s = sect_table + i * 40
+        name = bytes(data[s:s+8]).split(b"\x00", 1)[0]
+        if name == b".bun":
+            vsize   = _struct.unpack_from("<I", data, s + 8)[0]
+            rsize   = _struct.unpack_from("<I", data, s + 16)[0]
+            raw_off = _struct.unpack_from("<I", data, s + 20)[0]
+            return (raw_off, rsize or vsize)
+    raise RuntimeError(".bun section not found (PE)")
+
+
+def _find_bun_section(data) -> tuple[int, int]:
+    """Dispatch to ELF / Mach-O / PE parser by magic bytes. Cross-OS."""
+    head = bytes(data[:4])
+    if head[:4] == b"\x7fELF":
+        return _find_bun_section_elf(data)
+    if head in (b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf",
+                b"\xce\xfa\xed\xfe", b"\xfe\xed\xfa\xce",
+                b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca",
+                b"\xca\xfe\xba\xbf", b"\xbf\xba\xfe\xca"):
+        return _find_bun_section_macho(data)
+    if head[:2] == b"MZ":
+        return _find_bun_section_pe(data)
+    raise RuntimeError(f"unknown binary format magic={head.hex()}")
 
 
 def patch_bun_sea_inplace(binary: Path, patches: list) -> dict:
