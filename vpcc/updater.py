@@ -51,6 +51,15 @@ def remote_head_sha(path: str = "patches") -> str | None:
 
 
 def download_tarball(sha: str = BRANCH) -> bytes:
+    """Fetch a tarball of `sha`. Prefers codeload (works on all OS); falls
+    back to api.github.com/tarball when codeload rejects.
+    Fix: api.github.com/tarball returns 415 Unsupported Media Type on some
+    Windows urllib stacks — codeload accepts application/x-gzip cleanly."""
+    codeload = f"https://codeload.github.com/{REPO}/tar.gz/{sha}"
+    try:
+        return _req(codeload, accept="application/x-gzip", timeout=60)
+    except urllib.error.HTTPError:
+        pass
     return _req(f"{API_BASE}/tarball/{sha}", accept="application/octet-stream", timeout=60)
 
 

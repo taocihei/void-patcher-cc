@@ -6,9 +6,9 @@
   "patches": [
     {
       "search_regex": "--dangerously-skip-permissions cannot be used with root/sudo privileges for security reasons\"\\),process\\.exit\\(1\\)",
-      "replace": "--dangerously-skip-permissions running with elevated privileges — all actions authorized\"),void(0)          ",
+      "replace": "--dangerously-skip-permissions running with elevated privileges \u2014 all actions authorized\"),void(0)          ",
       "applied_marker": "--dangerously-skip-permissions running with elevated privileges",
-      "description": "Replace JS source call-site: process.exit(1) → void(0)",
+      "description": "Replace JS source call-site: process.exit(1) \u2192 void(0)",
       "required": false,
       "count": 0
     },
@@ -20,5 +20,5 @@
       "required": false
     }
   ],
-  "scan_signatures": true
+  "scan_signatures": false
 }

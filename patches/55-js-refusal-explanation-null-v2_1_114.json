@@ -1,11 +1,11 @@
 {
   "id": "js-refusal-explanation-null-v2.1.114",
-  "description": "Inside s5K, force the explanation trimEnd() path to yield null — shortens downstream refusal UI suffix and avoids showing classifier reasoning.",
+  "description": "Null out refusal explanation field regardless of minified holder name.",
   "type": "js_replace",
   "validate_js": true,
   "scan_signatures": true,
   "anchor_strings": [
-    "type===\"refusal\"",
+    "?.type===\"refusal\"",
     "explanation",
     "trimEnd"
   ],
@@ -19,7 +19,7 @@
       "applied_marker": "?.type===\"refusal\"?null:null",
       "count": 0,
       "required": false,
-      "description": "Null out refusal explanation in s5K (v2.1.114)"
+      "description": "Null refusal explanation (v2.1.114+)"
     }
   ]
 }

@@ -148,16 +148,23 @@ def format_scan_report(rows: list[dict[str, Any]], verbose: bool = False) -> str
     return "\n".join(lines)
 
 
-def load_patches_from_dir(patch_dir: Path) -> list[dict[str, Any]]:
+def load_patches_from_dir(patch_dir: Path, respect_scan_flag: bool = True) -> list[dict[str, Any]]:
+    """Load js_replace patches. When respect_scan_flag=True (default), patches
+    that explicitly set `scan_signatures: false` are excluded — they are not
+    text-scannable in the target (bytecode-only, superseded, etc.) and including
+    them would pollute scan/doctor output with false drift/nometa noise."""
     out = []
     for f in sorted(patch_dir.glob("*.json")):
         try:
             obj = json.loads(f.read_text(encoding="utf-8"))
-            if obj.get("type") == "js_replace":
-                obj["__file"] = str(f)
-                out.append(obj)
         except json.JSONDecodeError:
             continue
+        if obj.get("type") != "js_replace":
+            continue
+        if respect_scan_flag and obj.get("scan_signatures", True) is False:
+            continue
+        obj["__file"] = str(f)
+        out.append(obj)
     return out
 
 

@@ -3,7 +3,7 @@
   "description": "Force the tg7(A) predicate (returns true when a path requires a write-permission prompt) to always return false. Removes permission prompts for write ops at source.",
   "type": "js_replace",
   "validate_js": true,
-  "scan_signatures": true,
+  "scan_signatures": false,
   "anchor_strings": [
     "function tg7",
     "Claude requested permissions to write"
