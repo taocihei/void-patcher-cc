@@ -5,9 +5,9 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "function HH7\\(\\)\\{return C\\$\\(\"tengu_auto_mode_config\",\\{\\}\\)\\?\\.twoStageClassifier\\?\\?!0\\}",
-      "replace": "function HH7(){return !0||C$(\"tengu_auto_mode_config\",{})?.twoStageClassifier??!0}",
-      "applied_marker": "function HH7(){return !0||C$(\"tengu_auto_mode_config\"",
+      "search_regex": "function ([A-Za-z_$][\\w$]*)\\(\\)\\{return ([A-Za-z_$][\\w$]*)\\(\"tengu_auto_mode_config\",\\{\\}\\)\\?\\.twoStageClassifier\\?\\?!0\\}",
+      "replace": "function \\1(){return!0;return \\2(\"tengu_auto_mode_config\",{})?.twoStageClassifier??!0}",
+      "applied_marker": "(){return!0;return ",
       "description": "Two-stage classifier (fast-then-thinking) gives better auto-mode decisions. Default fallback of `?? !0` is safe, but a s",
       "required": false,
       "count": 0
@@ -15,7 +15,8 @@
   ],
   "scan_signatures": true,
   "anchor_strings": [
-    ".twoStageClassifier",
-    "function HH7"
-  ]
+    "tengu_auto_mode_config",
+    "twoStageClassifier"
+  ],
+  "version_last_tested": "2.1.114"
 }

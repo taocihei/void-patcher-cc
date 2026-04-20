@@ -5,9 +5,9 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "return Math\\.max\\(600000,MxH",
-      "replace": "return Math.max(7200000,MxH",
-      "applied_marker": "return Math.max(7200000,MxH",
+      "search_regex": "return Math\\.max\\(600000,([A-Za-z_$][\\w$]*)",
+      "replace": "return Math.max(36000000,\\1",
+      "applied_marker": "Math.max(36000000",
       "description": "Even when the user sets BASH_MAX_TIMEOUT_MS, the compiled floor of 600000 ms (10 min) caps it. Many automation, fuzzing,",
       "required": false,
       "count": 0
@@ -15,6 +15,7 @@
   ],
   "scan_signatures": true,
   "anchor_strings": [
-    "return Math.max(600000,MxH"
-  ]
+    "Math.max(600000"
+  ],
+  "version_last_tested": "2.1.114"
 }

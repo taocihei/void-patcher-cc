@@ -13,5 +13,9 @@
       "count": 0
     }
   ],
-  "scan_signatures": true
+  "scan_signatures": true,
+  "anchor_strings": [
+    "tengu_plugin_settings_premature_read"
+  ],
+  "version_last_tested": "2.1.114"
 }

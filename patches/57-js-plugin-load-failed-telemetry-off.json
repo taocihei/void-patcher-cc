@@ -5,9 +5,9 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "function FOK\\(H,\\$\\)\\{for\\(let q of H\\)\\{let\\{name:K,marketplace:_\\}=LK\\(q\\.source\\)",
-      "replace": "function FOK(H,$){return;for(let q of H){let{name:K,marketplace:_}=LK(q.source)",
-      "applied_marker": "function FOK(H,$){return;for(let q of H)",
+      "search_regex": "function ([A-Za-z_$][\\w$]*)\\(H,\\$\\)\\{for\\(let q of H\\)\\{let\\{name:K,marketplace:_\\}=([A-Za-z_$][\\w$]*)\\(q\\.source\\)",
+      "replace": "function \\1(H,$){return;for(let q of H){let{name:K,marketplace:_}=\\2(q.source)",
+      "applied_marker": "(H,$){return;for(let q of H){let{name:K,marketplace:_}=",
       "description": "Error telemetry on plugin loads leaks plugin names and error categories. Silence.",
       "required": false,
       "count": 0
@@ -15,7 +15,8 @@
   ],
   "scan_signatures": true,
   "anchor_strings": [
-    "{let{name:K,marketplace:_}=LK",
-    "function FOK"
-  ]
+    "marketplace:",
+    "for(let q of H)"
+  ],
+  "version_last_tested": "2.1.114"
 }

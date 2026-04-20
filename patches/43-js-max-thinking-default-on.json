@@ -5,9 +5,9 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "function Z7H\\(\\)\\{if\\(process\\.env\\.MAX_THINKING_TOKENS\\)return parseInt\\(process\\.env\\.MAX_THINKING_TOKENS,10\\)>0;let\\{settings:H\\}=Um\\(\\);if\\(H\\.alwaysThinkingEnabled===!1\\)return!1;return!0\\}",
-      "replace": "function Z7H(){if(process.env.MAX_THINKING_TOKENS)return parseInt(process.env.MAX_THINKING_TOKENS,10)>0;let{settings:H}=Um();if(H.alwaysThinkingEnabled===!1)return!0;return!0}",
-      "applied_marker": "alwaysThinkingEnabled===!1)return!0;return!0}",
+      "search_regex": "function ([A-Za-z_$][\\w$]*)\\(\\)\\{if\\(process\\.env\\.MAX_THINKING_TOKENS\\)return parseInt\\(process\\.env\\.MAX_THINKING_TOKENS,10\\)>0;let\\{settings:([A-Za-z_$][\\w$]*)\\}=([A-Za-z_$][\\w$]*)\\(\\);if\\(\\2\\.alwaysThinkingEnabled===!1\\)return!1;return!0\\}",
+      "replace": "function \\1(){return!0;if(process.env.MAX_THINKING_TOKENS)return parseInt(process.env.MAX_THINKING_TOKENS,10)>0;let{settings:\\2}=\\3();if(\\2.alwaysThinkingEnabled===!1)return!1;return!0}",
+      "applied_marker": "(){return!0;if(process.env.MAX_THINKING_TOKENS)",
       "description": "Extended thinking on Opus/Sonnet 4.5+ dramatically improves reasoning quality for security research and complex code tas",
       "required": false,
       "count": 0
@@ -15,8 +15,8 @@
   ],
   "scan_signatures": true,
   "anchor_strings": [
-    ">0;let{settings:H}=Um",
-    "return!1;return!0}",
-    "return parseInt"
-  ]
+    "MAX_THINKING_TOKENS",
+    "alwaysThinkingEnabled"
+  ],
+  "version_last_tested": "2.1.114"
 }

@@ -5,9 +5,9 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "let Y=process\\.argv\\.indexOf\\(\"--handle-uri\"\\);if\\(Y!==-1&&process\\.argv\\[Y\\+1\\]\\)",
-      "replace": "let Y=process.argv.indexOf(\"--handle-uri\");if(!1&&Y!==-1&&process.argv[Y+1])",
-      "applied_marker": "indexOf(\"--handle-uri\");if(!1&&Y!==-1",
+      "search_regex": "let ([A-Za-z_$][\\w$]*)=process\\.argv\\.indexOf\\(\"--handle-uri\"\\);if\\(\\1!==-1&&process\\.argv\\[\\1\\+1\\]\\)",
+      "replace": "let \\1=process.argv.indexOf(\"--handle-uri\");if(!1&&\\1!==-1&&process.argv[\\1+1])",
+      "applied_marker": "process.argv.indexOf(\"--handle-uri\");if(!1&&",
       "description": "The handler runs handleDeepLinkUri(URI) which can mutate user config and trigger enableConfigs() before the main CLI is ",
       "required": false,
       "count": 0
@@ -15,6 +15,8 @@
   ],
   "scan_signatures": true,
   "anchor_strings": [
-    "let Y=process.argv.indexOf"
-  ]
+    "\"--handle-uri\"",
+    "process.argv.indexOf"
+  ],
+  "version_last_tested": "2.1.114"
 }
