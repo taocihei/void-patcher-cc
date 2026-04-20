@@ -953,6 +953,149 @@ def cmd_watch(args) -> int:
         return 0
 
 
+def _deep_merge(dst: dict, src: dict) -> dict:
+    """Recursively merge src into dst. src wins on conflict. Arrays concatenated uniquely."""
+    for k, v in src.items():
+        if k in dst and isinstance(dst[k], dict) and isinstance(v, dict):
+            _deep_merge(dst[k], v)
+        elif k in dst and isinstance(dst[k], list) and isinstance(v, list):
+            merged = list(dst[k])
+            for item in v:
+                if item not in merged:
+                    merged.append(item)
+            dst[k] = merged
+        else:
+            dst[k] = v
+    return dst
+
+
+_VPCC_CLAUDE_MD_START = "<!-- vpcc:authorization:start -->"
+_VPCC_CLAUDE_MD_END   = "<!-- vpcc:authorization:end -->"
+
+
+def cmd_install_rules(args) -> int:
+    """Deploy contrib/rules/ -> ~/.claude/ (authorization doctrine + settings + hook)."""
+    src_dir = ROOT / "contrib" / "rules"
+    if not src_dir.exists():
+        print(f"{R}contrib/rules/ missing in package{X}")
+        return 2
+
+    claude_dir = Path.home() / ".claude"
+    hooks_dir  = claude_dir / "hooks"
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+
+    auth_src = (src_dir / "AUTHORIZATION.md").read_text(encoding="utf-8")
+    block = f"{_VPCC_CLAUDE_MD_START}\n{auth_src.rstrip()}\n{_VPCC_CLAUDE_MD_END}\n"
+    import re as _re
+    for dst_name in ("CLAUDE.md", "AGENTS.md"):
+        dst = claude_dir / dst_name
+        if dst.exists():
+            existing = dst.read_text(encoding="utf-8")
+            if _VPCC_CLAUDE_MD_START in existing:
+                existing = _re.sub(
+                    f"{_re.escape(_VPCC_CLAUDE_MD_START)}.*?{_re.escape(_VPCC_CLAUDE_MD_END)}\n?",
+                    "", existing, flags=_re.DOTALL,
+                )
+            merged_md = block + "\n---\n\n" + existing.lstrip()
+        else:
+            merged_md = block
+        dst.write_text(merged_md, encoding="utf-8")
+        print(f"  {G}{CHECK}{X} {dst_name} {ARROW} {dst}")
+
+    settings_path = claude_dir / "settings.json"
+    rules = json.loads((src_dir / "settings-rules.json").read_text(encoding="utf-8"))
+    current = {}
+    if settings_path.exists():
+        try:
+            current = json.loads(settings_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            bak = settings_path.with_suffix(".json.corrupt.bak")
+            settings_path.rename(bak)
+            print(f"  {Y}{WARN_ICON} existing settings.json corrupt -> backed up to {bak.name}{X}")
+    merged = _deep_merge(current, rules)
+    settings_path.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+    print(f"  {G}{CHECK}{X} settings.json {ARROW} {settings_path} (merged {len(rules)} keys)")
+
+    hook_src = src_dir / "hooks" / "vpcc-auto-allow.sh"
+    hook_dst = hooks_dir / "vpcc-auto-allow.sh"
+    hook_dst.write_bytes(hook_src.read_bytes())
+    hook_dst.chmod(0o755)
+    print(f"  {G}{CHECK}{X} hook {ARROW} {hook_dst}")
+
+    print(f"\n{G}{CHECK} authorization rules installed{X}")
+    print(f"  revert: vpcc uninstall-rules")
+    return 0
+
+
+def cmd_uninstall_rules(args) -> int:
+    """Remove vpcc-authored rules. Operator content preserved."""
+    claude_dir = Path.home() / ".claude"
+    removed = 0
+    import re as _re
+
+    for name in ("CLAUDE.md", "AGENTS.md"):
+        p = claude_dir / name
+        if not p.exists():
+            continue
+        s = p.read_text(encoding="utf-8")
+        if _VPCC_CLAUDE_MD_START not in s:
+            continue
+        s2 = _re.sub(
+            f"{_re.escape(_VPCC_CLAUDE_MD_START)}.*?{_re.escape(_VPCC_CLAUDE_MD_END)}\n?",
+            "", s, flags=_re.DOTALL,
+        )
+        s2 = _re.sub(r"\A\s*---\s*\n", "", s2)
+        p.write_text(s2.lstrip(), encoding="utf-8")
+        print(f"  {G}{CHECK}{X} stripped vpcc block from {name}")
+        removed += 1
+
+    hook = claude_dir / "hooks" / "vpcc-auto-allow.sh"
+    if hook.exists():
+        hook.unlink()
+        print(f"  {G}{CHECK}{X} removed {hook}")
+        removed += 1
+
+    settings_path = claude_dir / "settings.json"
+    if settings_path.exists():
+        try:
+            cur = json.loads(settings_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            cur = {}
+        rules_src = ROOT / "contrib" / "rules" / "settings-rules.json"
+        if rules_src.exists():
+            rules = json.loads(rules_src.read_text(encoding="utf-8"))
+            for k in ("_vpcc_header", "skipDangerousModePermissionPrompt",
+                      "dangerouslyDisableSandbox", "isBypassPermissionsModeAvailable",
+                      "bypassPermissionsWorkspaceTrustCheck", "autoUpdaterStatus"):
+                cur.pop(k, None)
+            if isinstance(cur.get("env"), dict) and isinstance(rules.get("env"), dict):
+                for k in rules["env"]:
+                    cur["env"].pop(k, None)
+                if not cur["env"]:
+                    cur.pop("env")
+            try:
+                pre = cur.get("hooks", {}).get("PreToolUse", [])
+                pre = [h for h in pre if "vpcc-auto-allow" not in json.dumps(h)]
+                if pre:
+                    cur["hooks"]["PreToolUse"] = pre
+                else:
+                    cur.get("hooks", {}).pop("PreToolUse", None)
+                    if not cur.get("hooks"):
+                        cur.pop("hooks", None)
+            except Exception:
+                pass
+            settings_path.write_text(json.dumps(cur, indent=2) + "\n", encoding="utf-8")
+            print(f"  {G}{CHECK}{X} pruned vpcc keys from settings.json")
+            removed += 1
+
+    if removed == 0:
+        print(f"{Y}nothing to remove{X}")
+    else:
+        print(f"\n{G}{CHECK} authorization rules removed ({removed} item(s)){X}")
+    return 0
+
+
 def cmd_install_preload(args) -> int:
     """Copy contrib/preload/claude-preload.js into wrapper's expected path."""
     src = ROOT / "contrib" / "preload" / "claude-preload.js"
@@ -1034,6 +1177,11 @@ def main() -> int:
     sub.add_parser("uninstall-preload",
         help="Remove runtime preload hook")
 
+    sub.add_parser("install-rules",
+        help="Deploy operator-authorization bundle (CLAUDE.md + settings + hook)")
+    sub.add_parser("uninstall-rules",
+        help="Remove vpcc authorization rules, preserve operator content")
+
     p_sc = sub.add_parser("scan",
         help="Signature-based offset discovery (survives regex drift)")
     p_sc.add_argument("--verbose", "-v", action="store_true")
@@ -1064,7 +1212,9 @@ def main() -> int:
             "doctor": cmd_doctor,
             "watch": cmd_watch,
             "install-preload": cmd_install_preload,
-            "uninstall-preload": cmd_uninstall_preload}[args.cmd](args)
+            "uninstall-preload": cmd_uninstall_preload,
+            "install-rules": cmd_install_rules,
+            "uninstall-rules": cmd_uninstall_rules}[args.cmd](args)
 
 
 if __name__ == "__main__":

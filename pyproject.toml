@@ -30,4 +30,12 @@ vpcc = "vpcc.__main__:main"
 include = ["vpcc*"]
 
 [tool.setuptools.package-data]
-vpcc = ["../patches/*.json"]
+vpcc = [
+    "../patches/*.json",
+    "../contrib/preload/*.js",
+    "../contrib/rules/*.md",
+    "../contrib/rules/*.json",
+    "../contrib/rules/hooks/*.sh",
+    "../contrib/wrappers/*",
+    "../contrib/systemd/*",
+]
