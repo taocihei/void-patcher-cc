@@ -5,7 +5,7 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "G25=O8\\(\\(\\)=>\\{return process\\.argv\\.includes\\(\"--hard-fail\"\\)\\}\\)",
+      "search_regex": "[A-Za-z_$][\\w$]*\\(\\);[A-Za-z_$][\\w$]*\\$\\(\\);[A-Za-z_$][\\w$]*\\(\\);[A-Za-z_$][\\w$]*\\$\\(\\);[A-Za-z_$][\\w$]*\\$\\(\\);[A-Za-z_$][\\w$]*\\(\\);[A-Za-z_$][\\w$]*\\$\\(\\);\\$[A-Za-z_$][\\w$]*\\$=\\[\\];[A-Za-z_$][\\w$]*=\\[\\];[A-Za-z_$][\\w$]*=[A-Za-z_$][\\w$]*\\(\\(\\)=>\\{return\\ process\\.argv\\.includes\\(\"\\-\\-hard\\-fail\"\\)\\}\\)\\}\\);function\\ [A-Za-z_$][\\w$]*\\([A-Za-z_$][\\w$]*\\)\\{[A-Za-z_$][\\w$]*\\ \\$=\\[\\],[A-Za-z_$][\\w$]*=!1;async\\ func",
       "replace": "G25=O8(()=>{return !1&&process.argv.includes(\"--hard-fail\")})",
       "applied_marker": "G25=O8(()=>{return !1&&process.argv.includes(\"--hard-fail\")",
       "description": "`--hard-fail` is a hidden destructive flag that aborts on any soft error. Accidental set in CI can wipe a long session. ",

@@ -5,7 +5,7 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "function pOK\\(H,\\$,q\\)\\{for\\(let K of H\\)\\{",
+      "search_regex": "=String\\([A-Za-z_$][\\w$]*\\.getDate\\(\\)\\)\\.padStart\\(2,\"0\"\\);return`\\$\\{\\$\\}\\-\\$\\{[A-Za-z_$][\\w$]*\\}\\-\\$\\{[A-Za-z_$][\\w$]*\\}`\\}function\\ [A-Za-z_$][\\w$]*\\(\\)\\{return\\ [A-Za-z_$][\\w$]*\\ Date\\(\\)\\.toLocaleString\\(\"[A-Za-z_$][\\w$]*\\-[A-Za-z_$][\\w$]*\",\\{month:\"long\",[A-Za-z_$][\\w$]*",
       "replace": "function pOK(H,$,q){return;for(let K of H){",
       "applied_marker": "function pOK(H,$,q){return;for(let K of H)",
       "description": "Per-session plugin inventory telemetry is detailed; suppress independently of generic metrics patch.",

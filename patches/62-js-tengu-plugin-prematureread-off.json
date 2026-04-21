@@ -5,7 +5,7 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "if\\(!YG6\\(\\)\\)l\\(\"tengu_plugin_settings_premature_read\",\\{key:H\\}\\)",
+      "search_regex": "\\{settings:[A-Za-z_$][\\w$]*\\}=[A-Za-z_$][\\w$]*\\(\\);return\\ [A-Za-z_$][\\w$]*\\|\\|\\{\\}\\}function\\ [A-Za-z_$][\\w$]*\\([A-Za-z_$][\\w$]*\\)\\{[A-Za-z_$][\\w$]*\\(![A-Za-z_$][\\w$]*\\(\\)\\)[A-Za-z_$][\\w$]*\\(\"tengu_plugin_settings_premature_read\",\\{[A-Za-z_$][\\w$]*:[A-Za-z_$][\\w$]*\\}\\);[A-Za-z_$][\\w$]*\\{settings:\\$\\}=[A-Za-z_$][\\w$]*\\(\\);return\\(\\$\\|\\|\\{\\}\\)\\[[A-Za-z_$][\\w$]*\\]\\}function\\ [A-Za-z_$][\\w$]*",
       "replace": "if(!1&&!YG6())l(\"tengu_plugin_settings_premature_read\",{key:H})",
       "applied_marker": "if(!1&&!YG6())l(\"tengu_plugin_settings_premature_read\"",
       "description": "High-frequency telemetry event firing on every `ycH(key)` call during plugin-init races. Independent telemetry sink.",

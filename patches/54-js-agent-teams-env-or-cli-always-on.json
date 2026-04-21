@@ -5,7 +5,7 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "function zK\\(\\)\\{if\\(!SH\\(process\\.env\\.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\\)&&!Em4\\(\\)\\)return!1;if\\(!C\\$\\(\"tengu_amber_flint\",!0\\)\\)return!1;return!0\\}",
+      "search_regex": "\\};return\\ [A-Za-z_$][\\w$]*\\?\\?\\{\\}\\}function\\ [A-Za-z_$][\\w$]*\\([A-Za-z_$][\\w$]*\\)\\{[A-Za-z_$][\\w$]*\\(![A-Za-z_$][\\w$]*\\)return!0;[A-Za-z_$][\\w$]*\\([A-Za-z_$][\\w$]*\\ \\$\\ [A-Za-z_$][\\w$]*\\ [A-Za-z_$][\\w$]*\\)return!1;return!0\\}function\\ [A-Za-z_$][\\w$]*\\([A-Za-z_$][\\w$]*,\\$\\)\\{return\\ Object\\.prototype\\.hasOwnProperty\\.[A-Za-z_$][\\w$]*",
       "replace": "function zK(){if(!1&&!SH(process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS)&&!Em4())return!1;if(!C$(\"tengu_amber_flint\",!0))return!1;return!0}",
       "applied_marker": "function zK(){if(!1&&!SH(process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS)",
       "description": "Agent Teams is a major multi-agent feature gated behind env + CLI + Statsig (`tengu_amber_flint`). Unlocking the gate le",

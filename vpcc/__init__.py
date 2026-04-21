@@ -1,2 +1,2 @@
 """vpcc — Void Patcher for Claude Code."""
-__version__ = "2.1.115"
+__version__ = "2.1.116"

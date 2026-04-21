@@ -5,7 +5,7 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "function b56\\(\\)\\{let H=I6\\(\\)\\|\\|\\{\\};return H\\.disableAutoMode===\"disable\"\\|\\|H\\.permissions\\?\\.disableAutoMode===\"disable\"\\}",
+      "search_regex": "able_bypass_permissions_mode\"\\)\\}function\\ [A-Za-z_$][\\w$]*\\(\\)\\{[A-Za-z_$][\\w$]*\\ [A-Za-z_$][\\w$]*=[A-Za-z_$][\\w$]*\\(\\)\\|\\|\\{\\};return\\ [A-Za-z_$][\\w$]*\\.disableAutoMode===\"disable\"\\|\\|[A-Za-z_$][\\w$]*\\.permissions\\?\\.disableAutoMode===\"disable\"\\}function\\ [A-Za-z_$][\\w$]*\\(\\)\\{[A-Za-z_$][\\w$]*",
       "replace": "function b56(){let H=I6()||{};return !1&&(H.disableAutoMode===\"disable\"||H.permissions?.disableAutoMode===\"disable\")}",
       "applied_marker": "function b56(){let H=I6()||{};return !1&&",
       "description": "Auto mode (model-classifier permission decisions) is a productivity feature. The `disableAutoMode` setting (personal or ",

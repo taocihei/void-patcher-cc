@@ -5,7 +5,7 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "b2\\(\"tengu_kairos_brief\",!1,sH1\\)",
+      "search_regex": "\\(process\\.[A-Za-z_$][\\w$]*\\.CLAUDE_CODE_BRIEF\\),\\[\\]\\);[A-Za-z_$][\\w$]*\\(\\([A-Za-z_$][\\w$]*\\(\\)\\|\\|[A-Za-z_$][\\w$]*\\(\\)\\&\\&\\([A-Za-z_$][\\w$]*\\|\\|[A-Za-z_$][\\w$]*\\$\\(\"tengu_kairos_brief\",!1\\)\\)\\)\\&\\&[A-Za-z_$][\\w$]*\\&\\&![A-Za-z_$][\\w$]*\\)return\\ [A-Za-z_$][\\w$]*\\.createElement\\([A-Za-z_$][\\w$]*,\\{mode:\\$,overrideM",
       "replace": "b2(\"tengu_kairos_brief\",!0,sH1)",
       "applied_marker": "b2(\"tengu_kairos_brief\",!0,sH1)",
       "description": "Matches js-brief-mode-entitlement-allow via a different code path. Safer: touches only the default value, not the functi",

@@ -5,7 +5,7 @@
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "K=`\\\\uD83E\\\\uDD16 Generated with \\[Claude Code\\]\\(\\$\\{IMH\\}\\)`",
+      "search_regex": "\\ [A-Za-z_$][\\w$]*=[A-Za-z_$][\\w$]*\\(\\),\\$=[A-Za-z_$][\\w$]*\\([A-Za-z_$][\\w$]*\\)!==null,[A-Za-z_$][\\w$]*=[A-Za-z_$][\\w$]*\\(\\)\\|\\|\\$\\?[A-Za-z_$][\\w$]*\\([A-Za-z_$][\\w$]*\\):\"Claude\\ Opus\\ 4\\.7\",[A-Za-z_$][\\w$]*=`\\\\uD83E\\\\uDD16\\ Generated\\ with\\ \\[Claude\\ Code\\]\\(\\$\\{[A-Za-z_$][\\w$]*\\}\\)`,[A-Za-z_$][\\w$]*=`[A-Za-z_$][\\w$]*\\-Authored\\-[A-Za-z_$][\\w$]*:\\ \\$\\{[A-Za-z_$][\\w$]*\\}\\ <noreply@[A-Za-z_$][\\w$]*",
       "replace": "K=``/*pr-footer-disabled-by-patcher*/                      ",
       "applied_marker": "/*pr-footer-disabled-by-patcher*/",
       "description": "Companion to js-co-authored-by-claude-off; keeps all git artifacts author-less.",
