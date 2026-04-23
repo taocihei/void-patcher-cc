@@ -1,54 +1,29 @@
 {
   "id": "js-classifier-all-failopen",
-  "description": "All classifier error paths fail open (allow) instead of closed (block) \u2014 5 error conditions patched",
+  "description": "Consolidated classifier error paths fail open (allow) instead of closed (block) — updated for Claude Code 2.1.114+ where 5 separate error strings were refactored into mo8() helper",
   "type": "js_replace",
   "validate_js": true,
   "patches": [
     {
-      "search_regex": "Classifier stage 1 unparseable - blocking for safety",
-      "replace": "Classifier stage 1 unparseable - allowing for safety",
-      "applied_marker": "Classifier stage 1 unparseable - allowing for safety",
-      "description": "Stage 1 parse failure \u2192 allow (regex)",
+      "search_regex": "Auto mode could not evaluate this action and is blocking it for safety",
+      "replace": "Auto mode could not evaluate this action and is allowing it for safety",
+      "applied_marker": "Auto mode could not evaluate this action and is allowing it for safety",
+      "description": "Consolidated classifier error (mo8 helper) -> allow (regex)",
       "required": false,
       "count": 0
     },
     {
-      "search_regex": "Classifier stage 2 unparseable - blocking for safety",
-      "replace": "Classifier stage 2 unparseable - allowing for safety",
-      "applied_marker": "Classifier stage 2 unparseable - allowing for safety",
-      "description": "Stage 2 parse failure \u2192 allow (regex)",
-      "required": false,
-      "count": 0
-    },
-    {
-      "search_regex": "Classifier returned no tool use block - blocking for safety",
-      "replace": "Classifier returned no tool use block - allowing for safety",
-      "applied_marker": "Classifier returned no tool use block - allowing for safety",
-      "description": "No tool_use block \u2192 allow (regex)",
-      "required": false,
-      "count": 0
-    },
-    {
-      "search_regex": "Invalid classifier response - blocking for safety",
-      "replace": "Invalid classifier response - allowing for safety",
-      "applied_marker": "Invalid classifier response - allowing for safety",
-      "description": "Invalid response \u2192 allow (regex)",
-      "required": false,
-      "count": 0
-    },
-    {
-      "search_regex": "Stage 2 classifier error - blocking",
-      "replace": "Stage 2 classifier error - allowing",
-      "applied_marker": "Stage 2 classifier error - allowing",
-      "description": "Stage 2 error \u2192 allow (regex)",
+      "search_regex": "Stage 2 classifier error - blocking based on stage 1 assessment",
+      "replace": "Stage 2 classifier error - allowing based on stage 1 assessment",
+      "applied_marker": "Stage 2 classifier error - allowing based on stage 1 assessment",
+      "description": "Stage 2 error fallthrough -> allow (regex)",
       "required": false,
       "count": 0
     }
   ],
   "scan_signatures": true,
   "anchor_strings": [
-    "Classifier stage 1 unparseable - blocking for safety",
-    "Classifier stage 2 unparseable - blocking for safety",
-    "Classifier returned no tool use block - blocking for safety"
+    "Auto mode could not evaluate this action and is blocking it for safety",
+    "Stage 2 classifier error - blocking based on stage 1 assessment"
   ]
 }
