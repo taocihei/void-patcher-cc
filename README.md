@@ -18,9 +18,9 @@
 
 <!-- Custom theme: electric cyan (#00D4FF) primary, neon pink (#FF6B9D) accent, deep space dark #0D1117 bg -->
 
-[![vpcc](https://img.shields.io/badge/vpcc-v2.1.114-00D4FF?style=for-the-badge&logo=gnubash&logoColor=white&labelColor=0D1117)](https://github.com/VoidChecksum/void-patcher-cc/releases)
+[![vpcc](https://img.shields.io/badge/vpcc-v2.1.118-00D4FF?style=for-the-badge&logo=gnubash&logoColor=white&labelColor=0D1117)](https://github.com/VoidChecksum/void-patcher-cc/releases)
 [![patches](https://img.shields.io/badge/patches-77-FF6B9D?style=for-the-badge&logo=codeigniter&logoColor=white&labelColor=0D1117)](patches/)
-[![target](https://img.shields.io/badge/claude--code-v2.1.114-F97316?style=for-the-badge&logo=anthropic&logoColor=white&labelColor=0D1117)](https://www.npmjs.com/package/@anthropic-ai/claude-code)
+[![target](https://img.shields.io/badge/claude--code-v2.1.118-F97316?style=for-the-badge&logo=anthropic&logoColor=white&labelColor=0D1117)](https://www.npmjs.com/package/@anthropic-ai/claude-code)
 [![format](https://img.shields.io/badge/format-ELF_.bun_%2B_cli.js-9C27B0?style=for-the-badge&logo=bun&logoColor=white&labelColor=0D1117)](https://bun.sh)
 [![license](https://img.shields.io/badge/GPL--3.0-blue?style=for-the-badge&logo=gnu&logoColor=white&labelColor=0D1117)](LICENSE)
 
@@ -69,7 +69,7 @@ Every CC upgrade **auto-heals**.
 - [How it works](#-how-it-works) · [Why it survives](#-why-it-survives-every-update)
 - [Compat matrix](#-compatibility-matrix) · [Install](#-install)
 - [Usage](#-usage) · [AUP bypass stack](#-aup-bypass-stack)
-- [Byte offsets · v2.1.114](#-byte-offsets--v21114-ref-build)
+- [Byte offsets · v2.1.118](#-byte-offsets--v21118-ref-build)
 - [Patch catalog](#-patch-catalog-77-total) · [Architecture](#-architecture)
 - [Auto-update flow](#-auto-update-flow)
 - [Manual RE · r2 / pwndbg / rg](#-manual-offset-discovery--r2--pwndbg--rg)
@@ -152,8 +152,9 @@ When ② drifts, `vpcc scan --auto-heal` rewrites it from ①'s context window. 
 |:---------------:|:--------------------:|:--------------------------:|-------:|---------:|:----------:|:-----------:|
 | 2.0.x           | `cli.js` (Node)      | Lin · mac · Win · WSL      |  20 MB | 62 / 77  | ✅          | legacy      |
 | 2.1.0 – 2.1.112 | `cli.js` (Node)      | Lin · mac · Win · WSL      |  26 MB | 70 / 77  | ✅          | stable      |
-| **2.1.114**     | **Bun SEA (ELF / Mach-O / PE)** | **Lin · mac (x64/arm64) · Win (x64/arm64) · WSL** | 236 MB | **77/77** | ✅ | **current** |
-| 2.1.115+        | Bun SEA (expected)   | all                        |   —    | auto-heal| ✅          | watch mode  |
+| 2.1.114 – 2.1.117 | Bun SEA (ELF / Mach-O / PE) | Lin · mac (x64/arm64) · Win (x64/arm64) · WSL | 236 MB | **77/77** | ✅ | stable      |
+| **2.1.118**     | **Bun SEA (ELF / Mach-O / PE)** | **Lin · mac (x64/arm64) · Win (x64/arm64) · WSL** | 236 MB | **77/77** | ✅ | **current** |
+| 2.1.119+        | Bun SEA (expected)   | all                        |   —    | auto-heal| ✅          | watch mode  |
 
 </div>
 
@@ -252,7 +253,7 @@ pipx uninstall vpcc
 ```text
 $ vpcc doctor
 vpcc doctor
-  vpcc ver   : 2.1.114
+  vpcc ver   : 2.1.118
   patches    : 77
   target     : .../claude-code-linux-x64/claude
   format     : Bun SEA ELF
@@ -336,7 +337,7 @@ function s5K(H,$,q){
 
 ---
 
-## 🧭 Byte offsets · v2.1.114 ref build
+## 🧭 Byte offsets · v2.1.118 ref build
 
 Reference binary: `@anthropic-ai/claude-code-linux-x64/claude`
 SHA-256 prefix: `12bd4b0916de` · size: **236 411 520 B** · format: ELF 64-bit LSB, `.bun` section
@@ -501,7 +502,7 @@ graph TD
 
 ```
 vpcc/
-├── __init__.py    — version 2.1.114
+├── __init__.py    — version 2.1.118
 ├── __main__.py    — 14 sub-commands
 ├── updater.py     — GitHub API sync + autoheal state machine
 └── scanner.py     — SigScanner + auto-heal regen
@@ -552,7 +553,7 @@ State at `~/.vpcc/state.json` (synthetic example):
   "last_cc_kind":   "bun_sea",
   "patches_commit": "a1b2c3d4e5f6",
   "patches_count":  77,
-  "updated_at":     "2026-04-20T10:00:00+00:00"
+  "updated_at":     "2026-04-24T10:00:00+00:00"
 }
 ```
 
@@ -667,7 +668,7 @@ Licensed **GPL-3.0-or-later**.
 
 ```
  $ vpcc doctor
-   vpcc ver   : 2.1.114
+   vpcc ver   : 2.1.118
    patches    : 77
    sig drift  : 0 (all anchors locatable)
    applied    : all
