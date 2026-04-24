@@ -1,6 +1,7 @@
 {
   "id": "js-session-memory-on",
-  "description": "Flip tengu_session_memory default to true so session-memory extraction runs without needing server Statsig rollout. Useful for long-context refactoring workflows.",
+  "disabled": true,
+  "description": "DISABLED — session-memory recap injected '※ recap:' at every session start, which is noisy and redundant with lorekeeper. Default false kept.",
   "type": "js_replace",
   "validate_js": true,
   "scan_signatures": true,
