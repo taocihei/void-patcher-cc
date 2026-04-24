@@ -352,49 +352,111 @@ function s5K(H,$,q){
 
 ---
 
-## 🧭 Byte offsets · v2.1.119 ref build
+## 🧭 Byte offsets · v2.1.119 full patch map
 
 Reference binary: `@anthropic-ai/claude-code-linux-x64/claude`
 SHA-256 prefix: `cca43053f062` · size: **245 230 208 B** · format: ELF 64-bit LSB, `.bun` section (active bundle **+ VFS copy** — see [2.1.119 layout change](#211119-layout-change) below)
 
-> Offsets below are from the **2.1.118 ref build** and are preserved as a historical anchor — regex anchors remain correct; absolute offsets have shifted in 2.1.119 (use `vpcc scan` to get the live offsets for the current binary).
+> Every offset is **live-resolved** via `vpcc scan` against the current binary. The table is regenerated after every CC update — absolute addresses drift on every re-minification, **regex anchors stay stable**.
+> Offset `—` = marker-only (patch idempotency checked via `applied_marker` only; no scannable anchor needed). `R` column: ✓ = regex pattern resolvable · ~ = anchor-string fallback only.
 
-<div align="center">
+<details open>
+<summary><b>All 77 scannable js_replace patches (2.1.119 ref build)</b></summary>
 
-| Offset (hex)  | Offset (dec)  | Anchor                                                         | Patch | Risk |
-|:-------------:|--------------:|----------------------------------------------------------------|:-----:|:----:|
-| `0x06810446`  |   109 092 934 | `Xj$`                                                          |  53   |  L   |
-| `0x068124a6`  |   109 092 982 | `function Xj$(H,$){…bypassPermissions…`                        |  53   |  L   |
-| `0x06abb4fd`  |   111 948 749 | `double press esc to edit your last message`                   |  17   |  L   |
-| `0x06abbb53`  |   111 962 083 | `function s5K` (refusal handler)                               |  52   |  L   |
-| `0x06abbbd8`  |   111 962 100 | `?.type==="refusal"?…explanation?.trimEnd()??null`             |  55   |  L   |
-| `0x06abbbc0`  |   111 962 192 | `tengu_refusal_api_response`                                   |  52   |  —   |
-| `0x06abbcbf`  |   111 962 367 | `Claude Code is unable to respond to this request…`            |  54   |  L   |
-| `0x06abbcf7`  |   111 962 423 | `appears to violate our Usage Policy`                          |  54   |  L   |
-| `0x06ad5f6e`  |   112 072 574 | `safetyCheck` · `canUseTool` deny branch                       |  57   |  L   |
-| `0x06ad5f8c`  |   112 072 604 | `classifierApprovable`                                         |  57   |  —   |
-| `0x06d15a33`  |   114 356 819 | sandbox compound-write `safetyCheck`                           |  58   |  M   |
-| `0x088b9d11`  |   143 290 129 | `shouldBlock` in auto-mode classifier                          |  33   |  M   |
-| `0x0b006d0e`  |   184 565 518 | `bypassPermissions` statsig recheck                            |  34   |  L   |
-| `0x00866eaa` *|    filtered ptr| `if(j?.type==="rule")return{behavior:"deny"…`                 |  58   |  M   |
-| `0x00a80517` *|    filtered ptr| `function tg7(A){`                                            |  59   |  L   |
+| # | Offset (hex) | R | Patch | Effect |
+|--:|:------------:|:-:|-------|--------|
+| 01 | `@0x002eef83` | ✓ | `js-trust-dialog` | Auto-accept trust dialog, onboarding, and external includes in cli |
+| 02 | `—` | ✓ | `js-bypass-mode` | Enable isBypassPermissionsModeAvailable in cli |
+| 03 | `@0x00902509` | ✓ | `js-allow-skip-permissions` | Default allowDangerouslySkipPermissions to true (was false) |
+| 04 | `@0x07c248e3` | ✓ | `js-disable-bypass-check` | Neutralize the operator disableBypassPermissionsMode check — prevents remote pol |
+| 05 | `@0x00f7ff6d` | ✓ | `js-plan-mode-refusal` | Remove plan-mode restriction that refuses to improve or augment code |
+| 06 | `@0x0732afdb` | ✓ | `js-session-bypass-mode` | Default sessionBypassPermissionsMode to true — sessions start in bypass mode |
+| 07 | `@0x0732b06b` | ✓ | `js-session-trust` | Auto-accept session trust — skip workspace trust verification on session start |
+| 08 | `@0x0212ae46` | ✓ | `js-classifier-failopen` | Auto-mode classifier fails open instead of closed — when classifier is unavailab |
+| 09 | `@0x01971e61` | ✓ | `js-aup-refusal` | Replace AUP violation refusal message with operator authorization — removes the  |
+| 10 | `—` | ✓ | `js-classifier-all-failopen` | Consolidated classifier error paths fail open (allow) instead of closed (block)  |
+| 11 | `@0x01971f4f` | ✓ | `js-aup-refusal-2` | Replace second AUP violation refusal message (the 'double press esc' variant) |
+| 12 | `@0x00b2aa80` | ✓ | `js-prompt-injection-sysprompt` | Remove prompt injection flagging instruction from system prompt — Claude no long |
+| 13 | `@0x00640d87` | ✓ | `js-metrics-disable` | Disable metrics/telemetry reporting to api |
+| 14 | `@0x0000c9f9` | ✓ | `js-subscription-max` | Pin client-side subscription check to 'max' — prevents feature downgrades from t |
+| 15 | `@0x002b1d2c` | ✓ | `js-additional-protection` | Disable x-anthropic-additional-protection header — stops sending server-side con |
+| 16 | `—` | ✓ | `js-plan-mode-disable` | Disable plan-mode enforcement — planModeRequired always false |
+| 17 | `@0x07e4c1d0` | ✓ | `js-security-guardrail` | Replace the hardcoded 'security research guardrail' (CsK constant) that refuses  |
+| 18 | `@0x00f7ff64` | ✓ | `js-malware-refusal` | Remove malware-code 'MUST refuse to improve or augment' directive — operator is  |
+| 19 | `@0x01be5ad6` | ✓ | `js-plan-mode-cannot` | Remove plan-mode 'You CANNOT and MUST NOT write' hard directive — allow plan-mod |
+| 20 | `—` | ✓ | `js-denial-workaround` | Replace the 'don't work around this denial maliciously' directive (C_7) with per |
+| 21 | `@0x07b3395e` | ✓ | `js-webfetch-preflight-skip` | WebFetch: skip domain_info preflight switch — treat every URL as allowed, no api |
+| 22 | `@0x00195b8b` | ✓ | `js-statsig-gate-kill-switches-off` | Tw() sync Statsig gate returns false for known kill-switch gates (tengu_disable_ |
+| 23 | `@0x000e6782` | ✓ | `js-agent-summary-disable` | A78/H() runs a hidden per-agent background summarization API call on a timer ([A |
+| 24 | `—` | ✓ | `js-bash-default-timeout-raise` | Raise BASH_DEFAULT_TIMEOUT_MS fallback from 120 s to 3600 s (1 h) when the env v |
+| 25 | `@0x0089f985` | ✓ | `js-bash-max-timeout-floor-raise` | Raise BASH_MAX_TIMEOUT_MS floor from Math |
+| 26 | `@0x0002bd3d` | ✓ | `js-mcp-sendrequest-timeout-raise` | Raise MCP client default per-request timeout from 30 s to 300 s |
+| 27 | `@0x004d00b6` | ✓ | `js-max-thinking-default-on` | Force Z7H() (isExtendedThinkingEnabled) to always return true, ignoring MAX_THIN |
+| 28 | `@0x07c0f4a3` | ✓ | `js-generated-with-claude-footer-off` | Also blank the PR-body attribution footer `🤖 Generated with [Claude Code](URL)`  |
+| 29 | `@0x00b7d78b` | ~ | `js-bypass-perm-mode-not-available-fake-ok` | Make runtime attempts to switch to `permissionMode: bypassPermissions` succeed e |
+| 30 | `@0x0801368e` | ✓ | `js-bypass-perm-mode-not-available-sdk-fake-ok` | Same as js-bypass-perm-mode-not-available-fake-ok but for the SDK/control-respon |
+| 31 | `@0x00bfb03f` | ✓ | `js-chrome-subscription-require-skip` | Remove the Claude-in-Chrome subscription gate that shows 'chrome-requires-subscr |
+| 32 | `@0x07dfa86f` | ✓ | `js-voice-mode-subscription-gate-skip` | Remove the 'Voice mode requires a Claude |
+| 33 | `@0x07c2600d` | ✓ | `js-auto-mode-disable-settings-bypass` | Make b56() (isAutoModeDisabledBySettings) always return false so auto mode is ne |
+| 34 | `@0x00b38d1c` | ✓ | `js-non-streaming-fallback-always-on` | Ignore CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK / tengu_disable_streaming_to_no |
+| 35 | `@0x01971d6f` | ✓ | `js-s5K-refusal-neutralize-v2.1.114` | Refusal stop_reason handler — short-circuit to silently ignore |
+| 36 | `@0x07420385` | ✓ | `js-Xj-permissionmode-allowall-v2.1.114` | Permission-mode mapper — force every mode to return "allow" |
+| 37 | `@0x002b4fe1` | ✓ | `js-experimental-betas-always-on` | Ignore CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS env so experimental anthropic-beta |
+| 38 | `@0x0014c2ed` | ✓ | `js-agent-teams-env-or-cli-always-on` | Enable experimental Agent Teams without needing CLAUDE_CODE_EXPERIMENTAL_AGENT_T |
+| 39 | `@0x01971e61` | ✓ | `js-aup-refusal-sanitize-v2.1.114` | Neutralize the composed AUP refusal message (qP + Usage Policy link) at its cons |
+| 40 | `@0x009bef3e` | ✓ | `js-plugin-deny-allowlist-passthrough` | Short-circuit the plugin-channel allowlist check that emits 'server X is not on  |
+| 41 | `@0x003cb298` | ✓ | `js-refusal-explanation-null-v2.1.114` | Null out refusal explanation field regardless of minified holder name |
+| 42 | `@0x00b0d11d` | ✓ | `js-jtH-safe-always-true-v2.1.114` | Force the safety-check helper to always return {safe:true} |
+| 43 | `@0x003e9702` | ✓ | `js-plugin-session-telemetry-off` | Stub `pOK()` — the function that emits `tengu_plugin_enabled_for_session` for ev |
+| 44 | `@0x07708e04` | ✓ | `js-canusetool-safetycheck-allow-v2.1.114` | In canUseTool permission gate, rewrite every {allowed:false,decisionReason:{type |
+| 45 | `@0x0043c950` | ✓ | `js-plugin-load-failed-telemetry-off` | Stub `FOK()` — `tengu_plugin_load_failed` event (plugin error categorization sen |
+| 46 | `—` | ✓ | `js-handle-uri-deeplink-disable` | Disable the hidden `--handle-uri <cc:// URI>` deep-link handler that runs before |
+| 47 | `@0x00619dc8` | ✓ | `js-rule-deny-allow-v2.1.114` | Flip sandbox rule deny → allow |
+| 48 | `@0x00736689` | ✓ | `js-statsig-tengu-kairos-brief-default-true` | Flip b2('tengu_kairos_brief', !1,  |
+| 49 | `@0x0076f1bf` | ✓ | `js-twostage-classifier-always-on` | Force HH7() (two-stage classifier gate) to always true so auto-mode uses the imp |
+| 50 | `@0x0760f1bc` | ✓ | `js-autocompact-default-off` | Flip default_global_config |
+| 51 | `@0x00118c0a` | ✓ | `js-tengu-plugin-prematureread-off` | Drop the `tengu_plugin_settings_premature_read` event emitted on every uncached  |
+| 52 | `@0x000dced1` | ~ | `js-hardfail-flag-disable` | Neutralize the `--hard-fail` CLI flag so process does not exit on first subagent |
+| 53 | `@0x007c84be` | ✓ | `js-bash-max-output-default-raise` | Raise BASH_MAX_OUTPUT_LENGTH soft default from 30k to 100k chars and cap from 15 |
+| 54 | `@0x008220ea` | ✓ | `js-task-max-output-default-raise` | Raise TASK_MAX_OUTPUT_LENGTH (subagent Task tool result cap) default from 32k to |
+| 55 | `@0x0772506e` | ✓ | `js-agent-implicit-fork-max-turns-raise` | Raise implicit-fork subagent maxTurns from 200 to 999 |
+| 56 | `@0x01d86185` | ✓ | `js-computer-use-policy-refusal` | Neutralize xi8() computer-use policy denylist refusal |
+| 57 | `@0x07c0f4d9` | ✓ | `js-co-authored-by-claude-off` | Strip hardcoded Co-Authored-By: Claude attribution line from generated commits |
+| 58 | `@0x00a14c04` | ✓ | `js-plugin-org-denylist-passthrough` | Neutralize enterprise allowedChannelPlugins denylist rejection message |
+| 59 | `—` | ✓ | `js-econnrefused-silent` | Silence ECONNREFUSED/ENOTFOUND throws in plugin marketplace download so they fal |
+| 60 | `—` | ✓ | `js-webfetch-lyrics-copyright-clause` | Remove the WebFetch system prompt block that forbids exact song lyrics, imposes  |
+| 61 | `@0x076ee9ff` | ✓ | `js-command-injection-classifier-neutralize` | Bash-prefix classifier flags ANY shell with ${} or backticks as 'command_injecti |
+| 62 | `@0x01976225` | ✓ | `js-dangerous-shell-prefix-neutralize` | Same classifier branch flags 'git' or any entry in bZ_ dangerous-shell-prefix se |
+| 63 | `@0x0090390a` | ✓ | `js-bypass-permissions-async-kill-v2_1_119` | v2 |
+| 64 | `@0x07a9ade5` | ✓ | `js-bypass-permissions-sync-kill-v2_1_119` | v2 |
+| 65 | `@0x0194c531` | ✓ | `js-always-enable-effort-on` | Flip CLAUDE_CODE_ALWAYS_ENABLE_EFFORT gate to always true — unlocks 'high effort |
+| 66 | `@0x00831e5f` | ✓ | `js-plan-mode-interview-phase-on` | Flip the plan-mode interview-phase gate default from false to true so plan mode  |
+| 67 | `@0x00b2ba0f` | ✓ | `js-verified-vs-assumed-on` | Flip tengu_verified_vs_assumed gate default to true — makes Claude emit the 'dis |
+| 68 | `@0x02594fbf` | ✓ | `js-marketplace-etimedout-silent` | Sibling to patch 75: plugin marketplace fetch also throws on ETIMEDOUT |
+| 69 | `@0x00b95c63` | ✓ | `js-destructive-command-warning-off` | tengu_destructive_command_warning gates a UI warning modal on dangerous bash com |
+| 70 | `@0x00862c71` | ✓ | `js-classifier-summary-kill-on` | Flip tengu_classifier_summary_kill gate default to true so the 'summary' classif |
+| 71 | `@0x00b309f9` | ✓ | `js-fgts-default-on` | Flip tengu_fgts (fine-grained tool streaming) default to true — enables eager_in |
+| 72 | `@0x07c0f4b3` | ✓ | `js-generated-with-footer-off-extra` | Patch 44 only neutralizes the first attribution template |
+| 73 | `@0x000dc1c3` | ✓ | `js-disable-nonessential-traffic-default` | ha6() determines the telemetry-network policy |
+| 74 | `—` | ✓ | `js-no-doc-creation-directive-off` | Remove the 'NEVER create documentation files (* |
+| 75 | `@0x00798b73` | ✓ | `js-auto-background-agents-on` | Flip kX1() auto-background-agents timeout default to 120000ms (enabled) without  |
+| 76 | `@0x008ec447` | ✓ | `js-session-memory-on` | Flip tengu_session_memory default to true so session-memory extraction runs with |
+| 77 | `@0x008b1d12` | ✓ | `js-cold-compact-on` | Flip tengu_cold_compact default to true so compaction can run in the 'cold' (non |
 
-<sub>Risk: **L** = pure early-return / string · **M** = control-flow divergence · **H** = affects write paths
-\*= offset in `.bun` section view as reported by `vpcc scan`</sub>
+</details>
 
-</div>
+### Regenerate locally
 
 ```bash
-# regenerate any offset table row locally
-SEA=$(npm root -g)/@anthropic-ai/claude-code/node_modules/@anthropic-ai/claude-code-linux-x64/claude
-rg -oab --text 'tengu_refusal_api_response|function s5K|function jtH|Xj\$|safetyCheck|classifierApprovable|behavior:"deny"|function tg7' "$SEA"
-```
-
-or via vpcc:
-
-```bash
+# full scan — all anchors, live offsets
 vpcc scan -v
+
+# single-patch deep-dive — view regex matches + context
 vpcc scan --export-patch js-s5K-refusal-neutralize-v2.1.114
+
+# ad-hoc grep (Linux x64 sample)
+SEA=$(npm root -g)/@anthropic-ai/claude-code/node_modules/@anthropic-ai/claude-code-linux-x64/claude
+rg -oab --text 'tengu_refusal_api_response|function s5K|Claude Code is unable' "$SEA"
 ```
 
 ---
@@ -493,21 +555,21 @@ Plugin telemetry off, deeplink disable, premature-read off, hardfail flag disabl
 ```mermaid
 %%{init:{'theme':'dark','themeVariables':{'primaryColor':'#00D4FF','fontFamily':'JetBrains Mono'}}}%%
 graph TD
-    W[~/.local/bin/claude<br/>bash wrapper]
-    W -->|detect| B1[npm @anthropic-ai/claude-code-linux-x64/claude]
-    W -->|detect| B2[/opt/claude-code/bin/claude]
-    W -->|detect| B3[cli.js legacy path]
-    W -->|BUN_OPTIONS=--preload| P[~/.local/share/void-patcher/claude-preload.js]
-    B1 --> BUN[Bun runtime]
+    W["~/.local/bin/claude<br/>bash wrapper"]
+    W -->|detect| B1["npm @anthropic-ai/claude-code-linux-x64/claude"]
+    W -->|detect| B2["/opt/claude-code/bin/claude"]
+    W -->|detect| B3["cli.js legacy path"]
+    W -->|"BUN_OPTIONS=--preload"| P["~/.local/share/void-patcher/claude-preload.js"]
+    B1 --> BUN["Bun runtime"]
     B2 --> BUN
-    B3 --> NODE[Node runtime]
-    BUN -->|.bun section| JSC[JSC parser]
-    JSC -->|patched bytes| RUN[Claude Code running]
+    B3 --> NODE["Node runtime"]
+    BUN -->|".bun section"| JSC["JSC parser"]
+    JSC -->|"patched bytes"| RUN["Claude Code running"]
     P --> RUN
-    RUN -.vpcc watch.-> WATCH
-    WATCH[vpcc watch] -->|sha drift| HEAL[auto-heal]
-    HEAL -->|regex regen| PATCHES[(patches/*.json)]
-    PATCHES --> PATCH[vpcc patch]
+    RUN -.-> WATCH
+    WATCH["vpcc watch"] -->|"sha drift"| HEAL["auto-heal"]
+    HEAL -->|"regex regen"| PATCHES[("patches/*.json")]
+    PATCHES --> PATCH["vpcc patch"]
     PATCH --> B1
     style W fill:#00D4FF,color:#0D1117
     style P fill:#FF6B9D,color:#0D1117
@@ -659,14 +721,49 @@ When all three anchors vanish → the preload hook (layer 2) still catches refus
 
 ---
 
-## 🛡️ Security & scope
+## 🛡️ Authorization & use
 
-- **Research software for a single operator-owned workstation.**
-- Pre-authorized by the repo owner for their own Claude Max subscription on their own hardware.
-- Ships **no** credentials, telemetry or callbacks beyond GitHub's public API for patch sync.
-- Every patch is verified (`node --check` or `--version` exec) and rolls back atomically on failure.
-- Every patch is idempotent (re-apply is a no-op).
-- **The operator remains responsible for compliance with Anthropic's Usage Policy.** This tool removes *client-side* guardrails; server-side enforcement is unaffected.
+### What this tool is
+
+Research software for a **single operator-owned workstation**. Sole purpose: give *you, the account holder* of a Claude Max subscription unconditional write-access to your own locally-cached Claude Code binary, and unlock your own data from client-side gating that does not materially affect what Anthropic's servers enforce anyway.
+
+### What ships
+
+- **No** credentials, keys, tokens, cookies, or telemetry beacons are collected, stored, or transmitted.
+- **No** callbacks beyond GitHub's public REST API (`api.github.com/repos/VoidChecksum/void-patcher-cc/*`) for patch-catalog sync.
+- **No** auto-execution on machines other than yours — every entry point is a manual invocation (`vpcc`, `install.sh`, `install.ps1`, or the optional `systemd` timer *you* enable).
+- All patches are atomic, idempotent, and verified by running `claude --version` on a tmp copy before atomic-swap.
+
+### Rules for downstream users — mandatory, read before `install.sh`
+
+By cloning, installing, or running any part of this repository you agree that:
+
+1. **Personal use only.** You are the sole human operator of the hardware this runs on **and** the account holder of the Claude Max/Pro subscription being patched. No shared machines, no redistribution of patched binaries, no running this on someone else's account.
+2. **Your Claude account, your compliance.** Anthropic's Usage Policy (AUP) and Commercial Terms still bind *you*. Removing a client-side refusal string **does not authorize** you to use Claude for anything prohibited by the AUP — server-side enforcement, rate limiting, abuse detection, and account-level review remain fully operational and *will* act on your account.
+3. **No evasion of server-side controls.** Anything that crosses the wire to Anthropic (rate limits, model-safety classifiers, abuse signals, subscription checks at the control-plane level) is **out of scope** for this tool and must not be bypassed by any means.
+4. **No use against employer hardware / accounts / subscriptions** without written authorization from the device owner and the account holder — even if that's the same legal entity, get it in writing.
+5. **No abuse-enabling redistribution.** You may fork, study, and share improvements under GPL-3.0. You may **not** package the patched binary for distribution, resell the capability, or advertise this tool as a way to abuse Anthropic's services.
+6. **No liability.** Software is AS-IS. You accept all consequences — account termination, subscription forfeiture, civil action — that arise from *your* use of this tool.
+7. **Security-research context only** for any patch that touches refusal or safety scaffolding. These patches are documented for transparency and audit purposes; using them outside an authorized research or single-operator dogfood context is your own risk.
+
+If you cannot satisfy **all seven**, do not install this tool. Use the stock Claude Code binary from `@anthropic-ai/claude-code`.
+
+### Machine-level safety guarantees
+
+- Every patch is verified (`node --check` for cli.js · `--version` exec for Bun SEA) and **rolls back atomically** on failure.
+- Pre-patch binary is stored under `~/.vpcc/backups/` — timestamped and sha-256-named for deterministic restore.
+- Every patch is **idempotent**: re-applying never double-patches (cheap `applied_marker` check).
+- Pre-flight refuses to run on binaries it doesn't recognise (unknown magic bytes → abort, no write).
+- Bun SEA bytecode integrity: patches only touch the **active entry bundle** via `_find_active_bundle_bounds()`; VFS copy and bytecode cache stay pristine (see [2.1.119 layout change](#211119-layout-change)).
+
+### Threat model
+
+vpcc assumes the operator has **physical + user-level access** to the host and an already-installed, already-authenticated Claude Code binary. It does **not**:
+
+- Elevate privileges (no setuid, no sudo inside code, no kernel hooks).
+- Modify any binary it didn't install (no `/usr/bin`, no system daemons).
+- Auto-apply patches without an explicit `vpcc patch` / `vpcc autoheal` invocation.
+- Persist across user accounts — everything lives under `$HOME/.vpcc`, `$XDG_BIN`, `$XDG_DATA_HOME`.
 
 ---
 
