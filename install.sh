@@ -61,14 +61,17 @@ else
 fi
 
 # ── 3. vpcc package — install or upgrade only if needed ──────────────────────
-REMOTE_REV="$(git ls-remote "https://github.com/$REPO" HEAD 2>/dev/null | awk '{print $1}' | head -c 40)"
-LOCAL_META="$(pipx list --short 2>/dev/null | awk '$1=="vpcc"{print $2}')"
-LOCAL_REV="$("$XDG_BIN/vpcc" --version 2>/dev/null || echo '')"
-if pipx list 2>/dev/null | grep -q '^package vpcc '; then
-    if [ -n "$REMOTE_REV" ] && pipx runpip vpcc show vpcc 2>/dev/null | grep -q "$REMOTE_REV"; then
-        ok "vpcc already at upstream HEAD — skipping reinstall"
+# Compare installed version against pyproject.toml version at remote HEAD.
+# pipx list output has leading whitespace: "   package vpcc 2.1.x, ..."
+# so grep without ^ anchor; dots in version are string-compared, not regex.
+REMOTE_VER="$(curl -fsSL "https://raw.githubusercontent.com/$REPO/main/pyproject.toml" 2>/dev/null \
+    | awk -F'"' '/^version/{print $2; exit}')"
+INSTALLED_VER="$(pipx list --short 2>/dev/null | awk '$1=="vpcc"{print $2}')"
+if pipx list 2>/dev/null | grep -q 'package vpcc '; then
+    if [ -n "$REMOTE_VER" ] && [ "$INSTALLED_VER" = "$REMOTE_VER" ]; then
+        ok "vpcc $INSTALLED_VER already current — skipping reinstall"
     else
-        log "upgrading vpcc to latest upstream"
+        log "upgrading vpcc ${INSTALLED_VER:-(unknown)} → ${REMOTE_VER:-(unknown)}"
         pipx install --force "git+https://github.com/$REPO" >/dev/null || die "pipx upgrade failed"
     fi
 else
