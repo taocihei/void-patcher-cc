@@ -1,9 +1,6 @@
 <div align="center">
 
-<a href="https://github.com/VoidChecksum/void-patcher-cc">
-<img alt="vpcc banner" src="https://raw.githubusercontent.com/VoidChecksum/void-patcher-cc/main/.github/assets/banner.svg" width="780"
-     onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
-<pre style="display:none">
+```
  ██╗   ██╗██████╗  ██████╗ ██████╗
  ██║   ██║██╔══██╗██╔════╝██╔════╝
  ██║   ██║██████╔╝██║     ██║
@@ -11,8 +8,7 @@
   ╚████╔╝ ██║     ╚██████╗╚██████╗
    ╚═══╝  ╚═╝      ╚═════╝ ╚═════╝
      V o i d   P a t c h e r   f o r   C l a u d e   C o d e
-</pre>
-</a>
+```
 
 <br>
 
